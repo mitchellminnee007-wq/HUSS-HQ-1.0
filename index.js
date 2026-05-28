@@ -35,6 +35,12 @@ for (const dir of commandDirs) {
           execute: command.executeStatus
         });
       }
+      if (command.resetData && typeof command.executeReset === 'function') {
+        client.commands.set(command.resetData.name, {
+          data: command.resetData,
+          execute: command.executeReset
+        });
+      }
       if (typeof command.init === 'function') {
         command.init(client);
       }
@@ -50,19 +56,39 @@ client.once(Events.ClientReady, () => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isButton()) {
     const [handlerName] = interaction.customId.split(':');
-    const command = client.commands.get('warning');
 
-    if (handlerName === 'warning_vote' && command && typeof command.handleButton === 'function') {
-      try {
-        await command.handleButton(interaction);
-      } catch (error) {
-        console.error('Error handling warning vote:', error);
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({ content: 'There was an error while handling that vote!', ephemeral: true });
-        } else {
-          await interaction.reply({ content: 'There was an error while handling that vote!', ephemeral: true });
+    if (handlerName === 'warning_vote') {
+      const command = client.commands.get('warning');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling warning vote:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error while handling that vote!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error while handling that vote!', ephemeral: true });
+          }
         }
       }
+      return;
+    }
+
+    if (handlerName === 'activemember_join') {
+      const command = client.commands.get('activemember');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling war sign-up button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing your request!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing your request!', ephemeral: true });
+          }
+        }
+      }
+      return;
     }
 
     return;
