@@ -1,12 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Events, EmbedBuilder } = require('discord.js');
-
-function cleanEnvValue(value) {
-  return value?.split('//')[0].trim();
-}
-
-const WELCOME_IMAGE_URL = cleanEnvValue(process.env.WELCOME_IMAGE_URL);
+const { getConfig } = require('../utils/config');
 
 function getRoleByName(guild, roleName) {
   const normalized = roleName.toLowerCase();
@@ -17,9 +12,9 @@ module.exports = (client) => {
   // Welcome new members: ping and direct them to verification and rules
   client.on(Events.GuildMemberAdd, async (member) => {
     try {
-      const welcomeChannelId = cleanEnvValue(process.env.WELCOME_CHANNEL_ID);
-      const verificationChannelId = cleanEnvValue(process.env.VERIFICATION_CHANNEL_ID);
-      const rulesChannelId = cleanEnvValue(process.env.RULES_CHANNEL_ID);
+      const welcomeChannelId      = getConfig(member.guild.id, 'WELCOME_CHANNEL_ID');
+      const verificationChannelId  = getConfig(member.guild.id, 'VERIFICATION_CHANNEL_ID');
+      const rulesChannelId         = getConfig(member.guild.id, 'RULES_CHANNEL_ID');
 
       if (!welcomeChannelId) {
         console.warn('WELCOME_CHANNEL_ID not configured; skipping welcome message.');
@@ -32,7 +27,8 @@ module.exports = (client) => {
         return;
       }
 
-      const unverifiedRole = getRoleByName(member.guild, 'unverified');
+      const unverifiedRole = member.guild.roles.cache.get('1386229683963826346')
+        || getRoleByName(member.guild, 'unverified');
       if (unverifiedRole && !member.roles.cache.has(unverifiedRole.id)) {
         await member.roles.add(unverifiedRole);
       } else if (!unverifiedRole) {
@@ -56,14 +52,15 @@ module.exports = (client) => {
         allowedMentions: { users: [member.id] }
       };
 
-      if (WELCOME_IMAGE_URL) {
-        const isRemoteImage = /^https?:\/\//i.test(WELCOME_IMAGE_URL) || /^attachment:/i.test(WELCOME_IMAGE_URL);
+      const welcomeImageUrl = getConfig(member.guild.id, 'WELCOME_IMAGE_URL');
+      if (welcomeImageUrl) {
+        const isRemoteImage = /^https?:\/\//i.test(welcomeImageUrl) || /^attachment:/i.test(welcomeImageUrl);
         if (isRemoteImage) {
-          embed.setImage(WELCOME_IMAGE_URL);
+          embed.setImage(welcomeImageUrl);
         } else {
-          const resolvedPath = path.isAbsolute(WELCOME_IMAGE_URL)
-            ? WELCOME_IMAGE_URL
-            : path.resolve(path.join(__dirname, '..'), WELCOME_IMAGE_URL);
+          const resolvedPath = path.isAbsolute(welcomeImageUrl)
+            ? welcomeImageUrl
+            : path.resolve(path.join(__dirname, '..'), welcomeImageUrl);
           if (fs.existsSync(resolvedPath)) {
             const imageName = path.basename(resolvedPath);
             messagePayload.files = [{ attachment: resolvedPath, name: imageName }];

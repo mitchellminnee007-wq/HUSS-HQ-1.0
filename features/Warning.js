@@ -7,6 +7,7 @@ const {
   EmbedBuilder,
   SlashCommandBuilder
 } = require('discord.js');
+const { getConfig } = require('../utils/config');
 
 const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
 const officerRanks = ['Officer', 'Commander'];
@@ -267,18 +268,18 @@ async function removeOneWarning(guildStore, record, moderatorId) {
 }
 
 async function sendAutomatedRemovalVotes(client) {
-  const officerChannelId = cleanEnvValue(process.env.OFFICER_CHANNEL_ID);
-  if (!officerChannelId) {
-    console.warn('OFFICER_CHANNEL_ID not configured; skipping automated warning removal votes.');
-    return;
-  }
-
   const store = readStore();
   let changed = false;
 
   for (const [guildId, guildStore] of Object.entries(store.guilds)) {
     const guild = await client.guilds.fetch(guildId).catch(() => null);
     if (!guild) continue;
+
+    const officerChannelId = getConfig(guildId, 'OFFICER_CHANNEL_ID');
+    if (!officerChannelId) {
+      console.warn(`OFFICER_CHANNEL_ID not configured for guild ${guildId}; skipping automated warning removal votes.`);
+      continue;
+    }
 
     const channel = await guild.channels.fetch(officerChannelId).catch(() => null);
     if (!channel || !channel.isTextBased()) continue;

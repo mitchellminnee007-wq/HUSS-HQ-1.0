@@ -1,13 +1,10 @@
 const { Events, EmbedBuilder } = require('discord.js');
-
-function cleanEnvValue(value) {
-  return value?.split('//')[0].trim();
-}
+const { getConfig } = require('../utils/config');
 
 module.exports = (client) => {
   client.on(Events.GuildMemberRemove, async (member) => {
     try {
-      const leaveLogChannelId = cleanEnvValue(process.env.LOG_CHANNEL_ID);
+      const leaveLogChannelId = getConfig(member.guild.id, 'LOG_CHANNEL_ID');
       if (!leaveLogChannelId) {
         console.warn('LOG_CHANNEL_ID not configured; skipping leave log.');
         return;

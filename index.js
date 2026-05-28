@@ -41,6 +41,12 @@ for (const dir of commandDirs) {
           execute: command.executeReset
         });
       }
+      if (command.cancelData && typeof command.executeCancel === 'function') {
+        client.commands.set(command.cancelData.name, {
+          data: command.cancelData,
+          execute: command.executeCancel
+        });
+      }
       if (typeof command.init === 'function') {
         command.init(client);
       }

@@ -35,6 +35,9 @@ for (const dir of commandDirs) {
       if (command.resetData) {
         commands.push(command.resetData.toJSON());
       }
+      if (command.cancelData) {
+        commands.push(command.cancelData.toJSON());
+      }
     }
   }
 }
