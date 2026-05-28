@@ -50,6 +50,9 @@ function getAllConfig(guildId) {
     'RULES_CHANNEL_ID',
     'LOG_CHANNEL_ID',
     'OFFICER_CHANNEL_ID',
+    'TICKET_CATEGORY_ID',
+    'TICKET_LOG_CHANNEL_ID',
+    'OPERATIONS_CHANNEL_ID',
     'WELCOME_IMAGE_URL'
   ];
   const result = {};

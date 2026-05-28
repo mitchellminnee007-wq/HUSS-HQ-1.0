@@ -7,6 +7,9 @@ const CHANNEL_SETTINGS = [
   { name: 'Rules Channel',          value: 'RULES_CHANNEL_ID' },
   { name: 'Leave Log Channel',      value: 'LOG_CHANNEL_ID' },
   { name: 'Officer Channel',        value: 'OFFICER_CHANNEL_ID' },
+  { name: 'Ticket Category',        value: 'TICKET_CATEGORY_ID' },
+  { name: 'Ticket Log Channel',     value: 'TICKET_LOG_CHANNEL_ID' },
+  { name: 'Operations Channel',     value: 'OPERATIONS_CHANNEL_ID' },
 ];
 
 module.exports = {

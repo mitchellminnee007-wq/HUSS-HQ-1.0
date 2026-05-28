@@ -97,6 +97,96 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    if (handlerName.startsWith('ticket_')) {
+      const command = client.commands.get('ticketpanel');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling ticket button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that ticket action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that ticket action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
+    if (handlerName.startsWith('op_')) {
+      const command = client.commands.get('operation');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling operation button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that operation action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that operation action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
+    return;
+  }
+
+  if (interaction.isStringSelectMenu()) {
+    const [prefix] = interaction.customId.split(':');
+    if (prefix.startsWith('ticket_')) {
+      const command = client.commands.get('ticketpanel');
+      if (command && typeof command.handleSelect === 'function') {
+        try {
+          await command.handleSelect(interaction);
+        } catch (error) {
+          console.error('Error handling ticket select menu:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that selection!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that selection!', ephemeral: true });
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  if (interaction.isModalSubmit()) {
+    const [prefix] = interaction.customId.split(':');
+    if (prefix.startsWith('ticket_')) {
+      const command = client.commands.get('ticketpanel');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling ticket modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that submission!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that submission!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix.startsWith('op_')) {
+      const command = client.commands.get('operation');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling operation modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that operation!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that operation!', ephemeral: true });
+          }
+        }
+      }
+    }
     return;
   }
 
