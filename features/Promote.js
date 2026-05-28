@@ -59,11 +59,14 @@ module.exports = {
       return interaction.reply({ content: `The rank role "${nextRank}" does not exist on this server.`, ephemeral: true });
     }
 
+    let demotedCommanders = [];
+    let hussarRole = null;
     if (nextRank === 'Commander') {
       const commanderRole = nextRole;
-      const hussarRole = getRankRole(interaction.guild, 'Hussar');
+      hussarRole = getRankRole(interaction.guild, 'Hussar');
       const currentCommanders = commanderRole.members.filter(member => member.id !== target.id);
       if (currentCommanders.size) {
+        demotedCommanders = [...currentCommanders.values()];
         await Promise.all(currentCommanders.map(async member => {
           await member.roles.remove(commanderRole);
           if (hussarRole) {
@@ -105,10 +108,24 @@ module.exports = {
       .setFooter({ text: `Promoted by ${executor.user.tag}` })
       .setTimestamp();
 
+    if (demotedCommanders.length) {
+      const demotedText = hussarRole
+        ? demotedCommanders.map(member => `${member} has been demoted from ${nextRole} to ${hussarRole}.`).join('\n')
+        : demotedCommanders.map(member => `${member} has been removed from ${nextRole}. The Hussar role was not found.`).join('\n');
+
+      embed.addFields({
+        name: 'Commander Replaced',
+        value: demotedText
+      });
+    }
+
     await interaction.reply({
       content: `${target}`,
       embeds: [embed],
-      allowedMentions: { users: [target.id], roles: [nextRole.id, ...(oldRankRole ? [oldRankRole.id] : [])] },
+      allowedMentions: {
+        users: [target.id, ...demotedCommanders.map(member => member.id)],
+        roles: [nextRole.id, ...(oldRankRole ? [oldRankRole.id] : []), ...(hussarRole ? [hussarRole.id] : [])]
+      },
       ephemeral: false
     });
   }
