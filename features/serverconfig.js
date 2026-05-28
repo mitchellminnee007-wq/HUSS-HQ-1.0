@@ -10,6 +10,8 @@ const CHANNEL_SETTINGS = [
   { name: 'Ticket Category',        value: 'TICKET_CATEGORY_ID' },
   { name: 'Ticket Log Channel',     value: 'TICKET_LOG_CHANNEL_ID' },
   { name: 'Operations Channel',     value: 'OPERATIONS_CHANNEL_ID' },
+  { name: 'Trainings Channel',      value: 'TRAININGS_CHANNEL_ID' },
+  { name: 'Kill Count Channel',     value: 'KILLCOUNT_CHANNEL_ID' },
 ];
 
 module.exports = {

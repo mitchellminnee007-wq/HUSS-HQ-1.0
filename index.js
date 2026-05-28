@@ -131,6 +131,57 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    if (handlerName.startsWith('tr_')) {
+      const command = client.commands.get('training');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling training button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that training action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that training action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
+    if (handlerName.startsWith('kc_')) {
+      const command = client.commands.get('killcount');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling kill count button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
+    if (handlerName.startsWith('bp_')) {
+      const command = client.commands.get('botpanel');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling bot panel button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
     return;
   }
 
@@ -183,6 +234,54 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.followUp({ content: 'There was an error processing that operation!', ephemeral: true });
           } else {
             await interaction.reply({ content: 'There was an error processing that operation!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix.startsWith('tr_')) {
+      const command = client.commands.get('training');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling training modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that training!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that training!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix.startsWith('kc_')) {
+      const command = client.commands.get('killcount');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling kill count modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that submission!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that submission!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix.startsWith('bp_')) {
+      const command = client.commands.get('botpanel');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling bot panel modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that submission!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that submission!', ephemeral: true });
           }
         }
       }

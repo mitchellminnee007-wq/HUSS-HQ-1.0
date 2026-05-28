@@ -39,7 +39,7 @@ module.exports = (client) => {
       const rulesMention = rulesChannelId ? `<#${rulesChannelId}>` : 'the rules channel';
 
       const embed = new EmbedBuilder()
-        .setTitle('Welcome to Winged Hussars Industries')
+        .setTitle(`Welcome to ${member.guild.name}`)
         .setDescription(`Hello ${member}, welcome aboard! Please complete verification in ${verificationMention} and read ${rulesMention} to join the ranks.`)
         .setColor(0xff0000)
         .setThumbnail(member.user.displayAvatarURL({ extension: 'png', size: 256 }))
