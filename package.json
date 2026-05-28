@@ -5,7 +5,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "deploy-commands": "node deploy-commands.js"
+    "deploy-commands": "node deploy-commands.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop huss-hq-bot",
+    "pm2:restart": "pm2 restart huss-hq-bot",
+    "pm2:logs": "pm2 logs huss-hq-bot",
+    "pm2:save": "pm2 save"
   },
   "engines": {
     "node": ">=18.0.0"

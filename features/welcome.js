@@ -60,12 +60,17 @@ module.exports = (client) => {
         const isRemoteImage = /^https?:\/\//i.test(WELCOME_IMAGE_URL) || /^attachment:/i.test(WELCOME_IMAGE_URL);
         if (isRemoteImage) {
           embed.setImage(WELCOME_IMAGE_URL);
-        } else if (fs.existsSync(WELCOME_IMAGE_URL)) {
-          const imageName = path.basename(WELCOME_IMAGE_URL);
-          messagePayload.files = [{ attachment: WELCOME_IMAGE_URL, name: imageName }];
-          embed.setImage(`attachment://${imageName}`);
         } else {
-          console.warn('WELCOME_IMAGE_URL file not found:', WELCOME_IMAGE_URL);
+          const resolvedPath = path.isAbsolute(WELCOME_IMAGE_URL)
+            ? WELCOME_IMAGE_URL
+            : path.resolve(path.join(__dirname, '..'), WELCOME_IMAGE_URL);
+          if (fs.existsSync(resolvedPath)) {
+            const imageName = path.basename(resolvedPath);
+            messagePayload.files = [{ attachment: resolvedPath, name: imageName }];
+            embed.setImage(`attachment://${imageName}`);
+          } else {
+            console.warn('WELCOME_IMAGE_URL file not found:', resolvedPath);
+          }
         }
       }
 
