@@ -36,13 +36,7 @@ Remove-Item $TarPath -Force
 
 # ── Extract on VPS and run deploy.sh ─────────────────────────────────────────
 Write-Host "[3/4] Extracting and deploying on VPS..." -ForegroundColor Yellow
-ssh $VPS @"
-  mkdir -p $REMOTE
-  tar -xzf /tmp/huss-deploy.tar.gz -C $REMOTE
-  rm -f /tmp/huss-deploy.tar.gz
-  chmod +x $REMOTE/deploy.sh
-  bash $REMOTE/deploy.sh
-"@
+ssh $VPS "mkdir -p $REMOTE && tar -xzf /tmp/huss-deploy.tar.gz -C $REMOTE && rm -f /tmp/huss-deploy.tar.gz && sed -i 's/\r//' $REMOTE/deploy.sh && bash $REMOTE/deploy.sh"
 if ($LASTEXITCODE -ne 0) { Write-Error "Remote deploy failed."; exit 1 }
 
 Write-Host ""
