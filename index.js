@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ActivityType } = require('discord.js');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -44,6 +44,7 @@ for (const dir of commandDirs) {
 
 client.once(Events.ClientReady, () => {
   console.log(`Logged in as ${client.user.tag}`);
+  client.user.setActivity('Powered by Hypha', { type: ActivityType.Playing });
 });
 
 client.on(Events.InteractionCreate, async interaction => {
