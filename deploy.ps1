@@ -42,3 +42,9 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Remote deploy failed."; exit 1 }
 Write-Host ""
 Write-Host "[4/4] Done!" -ForegroundColor Green
 Write-Host ""
+Write-Host "To deploy commands globally (all servers):" -ForegroundColor Cyan
+Write-Host "  1. Remove or leave GUILD_ID empty in .env"  -ForegroundColor White
+Write-Host "  2. Run: node deploy-commands.js"            -ForegroundColor White
+Write-Host "  3. Ensure 'Public Bot' is ON in the Discord Developer Portal" -ForegroundColor White
+Write-Host "  4. Use /invite in Discord to get the shareable invite link"   -ForegroundColor White
+Write-Host ""

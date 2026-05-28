@@ -48,6 +48,9 @@ const rest = new REST({ version: '10' }).setToken(token);
     } else {
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
       console.log('Successfully reloaded global application commands.');
+      console.log('');
+      console.log('Bot invite link (make sure "Public Bot" is ON in the Developer Portal):');
+      console.log(`https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=268520454&scope=bot%20applications.commands`);
     }
   } catch (error) {
     console.error(error);
