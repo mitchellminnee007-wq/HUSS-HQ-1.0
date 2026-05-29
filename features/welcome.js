@@ -27,10 +27,14 @@ module.exports = (client) => {
         return;
       }
 
-      const unverifiedRole = member.guild.roles.cache.get('1386229683963826346')
+      let unverifiedRole = member.guild.roles.cache.get('1386229683963826346')
         || getRoleByName(member.guild, 'unverified');
+      if (!unverifiedRole) {
+        // Cache may not be populated yet — fetch directly
+        unverifiedRole = await member.guild.roles.fetch('1386229683963826346').catch(() => null);
+      }
       if (unverifiedRole && !member.roles.cache.has(unverifiedRole.id)) {
-        await member.roles.add(unverifiedRole);
+        await member.roles.add(unverifiedRole).catch(err => console.error('Failed to add unverified role:', err));
       } else if (!unverifiedRole) {
         console.warn('Could not find unverified role.');
       }
