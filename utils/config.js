@@ -53,6 +53,7 @@ function getAllConfig(guildId) {
     'TICKET_CATEGORY_ID',
     'TICKET_LOG_CHANNEL_ID',
     'OPERATIONS_CHANNEL_ID',
+    'TRAININGS_CHANNEL_ID',
     'KILLCOUNT_CHANNEL_ID',
     'WELCOME_IMAGE_URL'
   ];

@@ -87,6 +87,11 @@ module.exports = {
     await target.roles.add(nextRole);
 
     if (!targetRank && nextRank === 'Cadet') {
+      const memberRole = getRoleByName(interaction.guild, 'Member');
+      if (memberRole && !target.roles.cache.has(memberRole.id)) {
+        await target.roles.add(memberRole);
+      }
+
       const cleanupRoles = ['unverified', 'Former collie', 'Ally']
         .map(roleName => getRoleByName(interaction.guild, roleName))
         .filter(role => role && target.roles.cache.has(role.id));

@@ -13,7 +13,7 @@ const {
 } = require('discord.js');
 const { getConfig, getAllConfig } = require('../utils/config');
 
-const PANEL_CHANNEL_ID = '1509618529274560733';
+const DEFAULT_PANEL_CHANNEL_ID = '1509618529274560733';
 const OFFICER_RANKS    = ['Officer', 'Commander'];
 const WAR_ROLE_ID      = '1424722021325082625';
 
@@ -267,11 +267,12 @@ module.exports = {
       return interaction.reply({ content: 'Only Officers and Commanders can post the bot panel.', ephemeral: true });
     }
 
-    const channel = interaction.guild.channels.cache.get(PANEL_CHANNEL_ID)
-      ?? await interaction.guild.channels.fetch(PANEL_CHANNEL_ID).catch(() => null);
+    const panelChannelId = getConfig(interaction.guildId, 'OFFICER_CHANNEL_ID') ?? DEFAULT_PANEL_CHANNEL_ID;
+    const channel = interaction.guild.channels.cache.get(panelChannelId)
+      ?? await interaction.guild.channels.fetch(panelChannelId).catch(() => null);
 
     if (!channel) {
-      return interaction.reply({ content: '❌ Officer panel channel not found. Check the channel ID.', ephemeral: true });
+      return interaction.reply({ content: '❌ Officer panel channel not found. Set it with `/config set-channel`.', ephemeral: true });
     }
 
     await channel.send({ embeds: [buildPanelEmbed()], components: buildPanelRows() });

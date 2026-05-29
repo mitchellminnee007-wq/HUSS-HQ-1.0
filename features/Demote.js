@@ -15,6 +15,14 @@ function getMemberRankRoles(member) {
   return ranks.filter(rank => member.roles.cache.some(role => role.name === rank));
 }
 
+function canAffectRank(executorRank, targetRank) {
+  if (executorRank === 'Officer' && (targetRank === 'Officer' || targetRank === 'Commander')) {
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('demote')
@@ -45,6 +53,10 @@ module.exports = {
     const targetRank = getMemberRank(target);
     if (!targetRank) {
       return interaction.reply({ content: 'Target member does not have a rank role.', ephemeral: true });
+    }
+
+    if (!canAffectRank(executorRank, targetRank)) {
+      return interaction.reply({ content: 'Officers cannot demote other Officers or the Commander.', ephemeral: true });
     }
 
     const currentIndex = ranks.indexOf(targetRank);

@@ -16,6 +16,10 @@ const { getConfig } = require('../utils/config');
 const STORE_PATH                 = path.join(__dirname, '..', 'data', 'trainings.json');
 const DEFAULT_TRAININGS_CHANNEL_ID = '1386239217998233660';
 const OFFICER_RANKS              = ['Officer', 'Commander'];
+const DEFAULT_TIME_ZONE           = 'Europe/Amsterdam';
+const REMINDER_MS                 = 15 * 60 * 1000;
+const MAX_TIMEOUT_MS              = 2 ** 31 - 1;
+const reminderTimers              = new Map();
 
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
@@ -49,21 +53,201 @@ function deleteTraining(guildId, msgId) {
   }
 }
 
+function clearReminder(guildId, msgId) {
+  const key = `${guildId}:${msgId}`;
+  const timer = reminderTimers.get(key);
+  if (timer) clearTimeout(timer);
+  reminderTimers.delete(key);
+}
+
+async function sendTrainingReminder(client, guildId, msgId, tr) {
+  if (tr.reminderSent) return;
+
+  const acceptedIds = tr.attendees.accepted.map(member => member.id);
+  const channel = await client.channels.fetch(tr.channelId).catch(() => null);
+  if (!channel || !channel.isTextBased()) return;
+
+  tr.reminderSent = true;
+  saveTraining(guildId, msgId, tr);
+
+  const timestamp = Math.floor(tr.time / 1000);
+  const content = acceptedIds.length
+    ? acceptedIds.map(id => `<@${id}>`).join(' ')
+    : undefined;
+
+  await channel.send({
+    content,
+    embeds: [
+      new EmbedBuilder()
+        .setColor(0xF39C12)
+        .setTitle(`Training starts soon: ${tr.title}`)
+        .setDescription(`Starts <t:${timestamp}:R> at <t:${timestamp}:t>.`)
+        .setFooter({ text: '15-minute reminder • Powered by Hypha' })
+    ],
+    allowedMentions: { users: acceptedIds }
+  }).catch(() => {});
+}
+
+function scheduleTrainingReminder(client, guildId, msgId, tr) {
+  clearReminder(guildId, msgId);
+
+  if (!tr || tr.reminderSent) return;
+
+  const delay = tr.time - Date.now() - REMINDER_MS;
+  if (delay <= 0) {
+    if (tr.time > Date.now()) sendTrainingReminder(client, guildId, msgId, tr);
+    return;
+  }
+
+  const key = `${guildId}:${msgId}`;
+  const timer = setTimeout(() => {
+    reminderTimers.delete(key);
+    const latestTraining = getTraining(guildId, msgId);
+    if (!latestTraining) return;
+    if (latestTraining.time - Date.now() - REMINDER_MS > 0) {
+      scheduleTrainingReminder(client, guildId, msgId, latestTraining);
+      return;
+    }
+    sendTrainingReminder(client, guildId, msgId, latestTraining);
+  }, Math.min(delay, MAX_TIMEOUT_MS));
+  reminderTimers.set(key, timer);
+}
+
+function scheduleAllTrainingReminders(client) {
+  const store = readStore();
+  for (const [guildId, trainings] of Object.entries(store.guilds)) {
+    for (const [msgId, tr] of Object.entries(trainings)) {
+      scheduleTrainingReminder(client, guildId, msgId, tr);
+    }
+  }
+}
+
 function isOfficer(member) {
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
 }
 
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function zonedTimeToDate(year, month, day, hour, minute, timeZone = DEFAULT_TIME_ZONE) {
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  const offset = getTimeZoneOffsetMs(utcGuess, timeZone);
+  const date = new Date(utcGuess.getTime() - offset);
+  const finalOffset = getTimeZoneOffsetMs(date, timeZone);
+
+  return new Date(utcGuess.getTime() - finalOffset);
+}
+
+function offsetTimeToDate(year, month, day, hour, minute, offsetMinutes) {
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMinutes * 60 * 1000);
+}
+
+function resolveTimeZone(input) {
+  if (!input) return { timeZone: DEFAULT_TIME_ZONE };
+
+  const value = input.trim();
+  const upper = value.toUpperCase();
+  const aliases = {
+    UTC: { offsetMinutes: 0 },
+    GMT: { offsetMinutes: 0 },
+    CET: { timeZone: 'Europe/Amsterdam' },
+    CEST: { timeZone: 'Europe/Amsterdam' },
+    AMSTERDAM: { timeZone: 'Europe/Amsterdam' },
+    NL: { timeZone: 'Europe/Amsterdam' },
+    ET: { timeZone: 'America/New_York' },
+    EST: { timeZone: 'America/New_York' },
+    EDT: { timeZone: 'America/New_York' },
+    CT: { timeZone: 'America/Chicago' },
+    CST: { timeZone: 'America/Chicago' },
+    CDT: { timeZone: 'America/Chicago' },
+    MT: { timeZone: 'America/Denver' },
+    MST: { timeZone: 'America/Denver' },
+    MDT: { timeZone: 'America/Denver' },
+    PT: { timeZone: 'America/Los_Angeles' },
+    PST: { timeZone: 'America/Los_Angeles' },
+    PDT: { timeZone: 'America/Los_Angeles' },
+    AWST: { timeZone: 'Australia/Perth' },
+    ACST: { timeZone: 'Australia/Adelaide' },
+    ACDT: { timeZone: 'Australia/Adelaide' },
+    AEST: { timeZone: 'Australia/Sydney' },
+    AEDT: { timeZone: 'Australia/Sydney' },
+    SYDNEY: { timeZone: 'Australia/Sydney' },
+    MELBOURNE: { timeZone: 'Australia/Melbourne' },
+    PERTH: { timeZone: 'Australia/Perth' }
+  };
+
+  if (aliases[upper]) return aliases[upper];
+
+  const offsetMatch = upper.match(/^(?:UTC|GMT)?([+-])(\d{1,2})(?::?(\d{2}))?$/);
+  if (offsetMatch) {
+    const [, sign, hours, minutes = '00'] = offsetMatch;
+    const offsetMinutes = (Number(hours) * 60 + Number(minutes)) * (sign === '+' ? 1 : -1);
+    return { offsetMinutes };
+  }
+
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: value }).format(new Date());
+    return { timeZone: value };
+  } catch {
+    return null;
+  }
+}
+
+function formatDateTimeForInput(time, timeZone = DEFAULT_TIME_ZONE) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date(time));
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+
+  return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute}`;
+}
+
 // ── Parse date input (accepts DD/MM/YYYY HH:MM or YYYY-MM-DD HH:MM) ──────────
 function parseDateTime(input) {
-  const dmyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  const dmyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?:\s+(.+))?$/);
   if (dmyMatch) {
-    const [, d, mo, y, h, mi] = dmyMatch;
-    return new Date(`${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}T${h.padStart(2,'0')}:${mi}:00`);
+    const [, d, mo, y, h, mi, zoneInput] = dmyMatch;
+    const zone = resolveTimeZone(zoneInput);
+    if (!zone) return null;
+    return zone.timeZone
+      ? zonedTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.timeZone)
+      : offsetTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.offsetMinutes);
   }
-  const isoMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/);
+  const isoMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(?:\s+(.+))?$/);
   if (isoMatch) {
-    const [, y, mo, d, h, mi] = isoMatch;
-    return new Date(`${y}-${mo}-${d}T${h.padStart(2,'0')}:${mi}:00`);
+    const [, y, mo, d, h, mi, zoneInput] = isoMatch;
+    const zone = resolveTimeZone(zoneInput);
+    if (!zone) return null;
+    return zone.timeZone
+      ? zonedTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.timeZone)
+      : offsetTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.offsetMinutes);
   }
   return null;
 }
@@ -76,6 +260,7 @@ function buildTrainingEmbed(tr) {
   return new EmbedBuilder()
     .setColor(0xF39C12)
     .setTitle(`🎓 ${tr.title}`)
+    .setDescription(tr.description)
     .addFields(
       { name: '🕐 Time', value: `<t:${timestamp}:F>\n<t:${timestamp}:R>` },
       { name: `✅ Attending (${tr.attendees.accepted.length})`,  value: fmt(tr.attendees.accepted),  inline: true },
@@ -91,7 +276,7 @@ function buildTrainingRows(msgId) {
   const rsvp = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`tr_accept:${msgId}`   ).setEmoji('✅').setStyle(ButtonStyle.Success  ),
     new ButtonBuilder().setCustomId(`tr_decline:${msgId}`  ).setEmoji('❌').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`tr_tentative:${msgId}`).setEmoji('❓').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`tr_tentative:${msgId}`).setEmoji('❓').setStyle(ButtonStyle.Primary),
   );
   const mgmt = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`tr_edit:${msgId}`  ).setLabel('Edit'  ).setStyle(ButtonStyle.Primary),
@@ -117,6 +302,10 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .setDMPermission(false),
 
+  init(client) {
+    scheduleAllTrainingReminders(client);
+  },
+
   async execute(interaction) {
     if (!isOfficer(interaction.member)) {
       return interaction.reply({ content: 'Only Officers and Commanders can create trainings.', ephemeral: true });
@@ -134,7 +323,7 @@ module.exports = {
         new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000),
       ),
       new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('time').setLabel('Date & Time (DD/MM/YYYY HH:MM)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('28/05/2026 19:00'),
+        new TextInputBuilder().setCustomId('time').setLabel('Date/time + optional timezone').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('28/05/2026 19:00 or 28/05/2026 19:00 EST'),
       ),
     );
 
@@ -163,6 +352,7 @@ module.exports = {
 
       saveTraining(interaction.guildId, msgId, tr);
       await refreshTrainingMessage(interaction, tr, msgId);
+      scheduleTrainingReminder(interaction.client, interaction.guildId, msgId, tr);
 
       const labels = { accepted: '✅ Attending', declined: '❌ Declined', tentative: '❓ Tentative' };
       const msg = alreadyIn
@@ -177,12 +367,7 @@ module.exports = {
         return interaction.reply({ content: 'Only Officers, Commanders or the creator can edit trainings.', ephemeral: true });
       }
 
-      const date = new Date(tr.time);
-      const dd   = String(date.getDate()).padStart(2, '0');
-      const mm   = String(date.getMonth() + 1).padStart(2, '0');
-      const yyyy = date.getFullYear();
-      const hh   = String(date.getHours()).padStart(2, '0');
-      const min  = String(date.getMinutes()).padStart(2, '0');
+      const timeValue = formatDateTimeForInput(tr.time);
 
       const modal = new ModalBuilder()
         .setCustomId(`tr_edit_modal:${msgId}`)
@@ -196,7 +381,7 @@ module.exports = {
           new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000).setValue(tr.description),
         ),
         new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('time').setLabel('Date & Time (DD/MM/YYYY HH:MM)').setStyle(TextInputStyle.Short).setRequired(true).setValue(`${dd}/${mm}/${yyyy} ${hh}:${min}`),
+          new TextInputBuilder().setCustomId('time').setLabel('Date/time + optional timezone').setStyle(TextInputStyle.Short).setRequired(true).setValue(timeValue),
         ),
       );
 
@@ -223,6 +408,7 @@ module.exports = {
       }
 
       deleteTraining(interaction.guildId, msgId);
+      clearReminder(interaction.guildId, msgId);
       return interaction.reply({ content: '🗑️ Training deleted.', ephemeral: true });
     }
   },
@@ -239,7 +425,7 @@ module.exports = {
 
       const parsedDate = parseDateTime(timeStr);
       if (!parsedDate || isNaN(parsedDate.getTime())) {
-        return interaction.reply({ content: '❌ Invalid date format. Please use `DD/MM/YYYY HH:MM` (e.g. `28/05/2026 19:00`).', ephemeral: true });
+        return interaction.reply({ content: '❌ Invalid date format. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -261,6 +447,7 @@ module.exports = {
         createdAt:     Date.now(),
         channelId:     channel.id,
         threadId:      null,
+        reminderSent:   false,
         attendees:     { accepted: [], declined: [], tentative: [] },
       };
 
@@ -278,6 +465,7 @@ module.exports = {
       }
 
       saveTraining(interaction.guildId, msg.id, tr);
+      scheduleTrainingReminder(interaction.client, interaction.guildId, msg.id, tr);
       return interaction.editReply(`✅ Training **${title}** posted in ${channel}!`);
     }
 
@@ -292,13 +480,15 @@ module.exports = {
 
       const parsedDate = parseDateTime(timeStr);
       if (!parsedDate || isNaN(parsedDate.getTime())) {
-        return interaction.reply({ content: '❌ Invalid date format. Please use `DD/MM/YYYY HH:MM`.', ephemeral: true });
+        return interaction.reply({ content: '❌ Invalid date format. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
       }
 
       tr.title       = title;
       tr.description = description;
       tr.time        = parsedDate.getTime();
+      tr.reminderSent = false;
       saveTraining(interaction.guildId, msgId, tr);
+      scheduleTrainingReminder(interaction.client, interaction.guildId, msgId, tr);
 
       await refreshTrainingMessage(interaction, tr, msgId);
 

@@ -16,6 +16,10 @@ const { getConfig } = require('../utils/config');
 const STORE_PATH              = path.join(__dirname, '..', 'data', 'operations.json');
 const DEFAULT_OPS_CHANNEL_ID  = '1386239322209910885';
 const OFFICER_RANKS           = ['Officer', 'Commander'];
+const DEFAULT_TIME_ZONE        = 'Europe/Amsterdam';
+const REMINDER_MS              = 15 * 60 * 1000;
+const MAX_TIMEOUT_MS           = 2 ** 31 - 1;
+const reminderTimers           = new Map();
 
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
@@ -49,23 +53,203 @@ function deleteOp(guildId, msgId) {
   }
 }
 
+function clearReminder(guildId, msgId) {
+  const key = `${guildId}:${msgId}`;
+  const timer = reminderTimers.get(key);
+  if (timer) clearTimeout(timer);
+  reminderTimers.delete(key);
+}
+
+async function sendOperationReminder(client, guildId, msgId, op) {
+  if (op.reminderSent) return;
+
+  const acceptedIds = op.attendees.accepted.map(member => member.id);
+  const channel = await client.channels.fetch(op.channelId).catch(() => null);
+  if (!channel || !channel.isTextBased()) return;
+
+  op.reminderSent = true;
+  saveOp(guildId, msgId, op);
+
+  const timestamp = Math.floor(op.time / 1000);
+  const content = acceptedIds.length
+    ? acceptedIds.map(id => `<@${id}>`).join(' ')
+    : undefined;
+
+  await channel.send({
+    content,
+    embeds: [
+      new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle(`Operation starts soon: ${op.title}`)
+        .setDescription(`Starts <t:${timestamp}:R> at <t:${timestamp}:t>.`)
+        .setFooter({ text: '15-minute reminder • Powered by Hypha' })
+    ],
+    allowedMentions: { users: acceptedIds }
+  }).catch(() => {});
+}
+
+function scheduleOperationReminder(client, guildId, msgId, op) {
+  clearReminder(guildId, msgId);
+
+  if (!op || op.reminderSent) return;
+
+  const delay = op.time - Date.now() - REMINDER_MS;
+  if (delay <= 0) {
+    if (op.time > Date.now()) sendOperationReminder(client, guildId, msgId, op);
+    return;
+  }
+
+  const key = `${guildId}:${msgId}`;
+  const timer = setTimeout(() => {
+    reminderTimers.delete(key);
+    const latestOp = getOp(guildId, msgId);
+    if (!latestOp) return;
+    if (latestOp.time - Date.now() - REMINDER_MS > 0) {
+      scheduleOperationReminder(client, guildId, msgId, latestOp);
+      return;
+    }
+    sendOperationReminder(client, guildId, msgId, latestOp);
+  }, Math.min(delay, MAX_TIMEOUT_MS));
+  reminderTimers.set(key, timer);
+}
+
+function scheduleAllOperationReminders(client) {
+  const store = readStore();
+  for (const [guildId, ops] of Object.entries(store.guilds)) {
+    for (const [msgId, op] of Object.entries(ops)) {
+      scheduleOperationReminder(client, guildId, msgId, op);
+    }
+  }
+}
+
 function isOfficer(member) {
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
+}
+
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function zonedTimeToDate(year, month, day, hour, minute, timeZone = DEFAULT_TIME_ZONE) {
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  const offset = getTimeZoneOffsetMs(utcGuess, timeZone);
+  const date = new Date(utcGuess.getTime() - offset);
+  const finalOffset = getTimeZoneOffsetMs(date, timeZone);
+
+  return new Date(utcGuess.getTime() - finalOffset);
+}
+
+function offsetTimeToDate(year, month, day, hour, minute, offsetMinutes) {
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMinutes * 60 * 1000);
+}
+
+function resolveTimeZone(input) {
+  if (!input) return { timeZone: DEFAULT_TIME_ZONE };
+
+  const value = input.trim();
+  const upper = value.toUpperCase();
+  const aliases = {
+    UTC: { offsetMinutes: 0 },
+    GMT: { offsetMinutes: 0 },
+    CET: { timeZone: 'Europe/Amsterdam' },
+    CEST: { timeZone: 'Europe/Amsterdam' },
+    AMSTERDAM: { timeZone: 'Europe/Amsterdam' },
+    NL: { timeZone: 'Europe/Amsterdam' },
+    ET: { timeZone: 'America/New_York' },
+    EST: { timeZone: 'America/New_York' },
+    EDT: { timeZone: 'America/New_York' },
+    CT: { timeZone: 'America/Chicago' },
+    CST: { timeZone: 'America/Chicago' },
+    CDT: { timeZone: 'America/Chicago' },
+    MT: { timeZone: 'America/Denver' },
+    MST: { timeZone: 'America/Denver' },
+    MDT: { timeZone: 'America/Denver' },
+    PT: { timeZone: 'America/Los_Angeles' },
+    PST: { timeZone: 'America/Los_Angeles' },
+    PDT: { timeZone: 'America/Los_Angeles' },
+    AWST: { timeZone: 'Australia/Perth' },
+    ACST: { timeZone: 'Australia/Adelaide' },
+    ACDT: { timeZone: 'Australia/Adelaide' },
+    AEST: { timeZone: 'Australia/Sydney' },
+    AEDT: { timeZone: 'Australia/Sydney' },
+    SYDNEY: { timeZone: 'Australia/Sydney' },
+    MELBOURNE: { timeZone: 'Australia/Melbourne' },
+    PERTH: { timeZone: 'Australia/Perth' }
+  };
+
+  if (aliases[upper]) return aliases[upper];
+
+  const offsetMatch = upper.match(/^(?:UTC|GMT)?([+-])(\d{1,2})(?::?(\d{2}))?$/);
+  if (offsetMatch) {
+    const [, sign, hours, minutes = '00'] = offsetMatch;
+    const offsetMinutes = (Number(hours) * 60 + Number(minutes)) * (sign === '+' ? 1 : -1);
+    return { offsetMinutes };
+  }
+
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: value }).format(new Date());
+    return { timeZone: value };
+  } catch {
+    return null;
+  }
+}
+
+function formatDateTimeForInput(time, timeZone = DEFAULT_TIME_ZONE) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date(time));
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+
+  return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute}`;
 }
 
 // ── Parse date input (accepts DD/MM/YYYY HH:MM or YYYY-MM-DD HH:MM) ──────────
 function parseDateTime(input) {
   // Try DD/MM/YYYY HH:MM
-  const dmyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  const dmyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?:\s+(.+))?$/);
   if (dmyMatch) {
-    const [, d, mo, y, h, mi] = dmyMatch;
-    return new Date(`${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}T${h.padStart(2,'0')}:${mi}:00`);
+    const [, d, mo, y, h, mi, zoneInput] = dmyMatch;
+    const zone = resolveTimeZone(zoneInput);
+    if (!zone) return null;
+    return zone.timeZone
+      ? zonedTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.timeZone)
+      : offsetTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.offsetMinutes);
   }
   // Try YYYY-MM-DD HH:MM
-  const isoMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/);
+  const isoMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(?:\s+(.+))?$/);
   if (isoMatch) {
-    const [, y, mo, d, h, mi] = isoMatch;
-    return new Date(`${y}-${mo}-${d}T${h.padStart(2,'0')}:${mi}:00`);
+    const [, y, mo, d, h, mi, zoneInput] = isoMatch;
+    const zone = resolveTimeZone(zoneInput);
+    if (!zone) return null;
+    return zone.timeZone
+      ? zonedTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.timeZone)
+      : offsetTimeToDate(Number(y), Number(mo), Number(d), Number(h), Number(mi), zone.offsetMinutes);
   }
   return null;
 }
@@ -80,6 +264,7 @@ function buildOpEmbed(op) {
   return new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(op.title)
+    .setDescription(op.description)
     .addFields(
       { name: '🕐 Time', value: `<t:${timestamp}:F>\n<t:${timestamp}:R>` },
       {
@@ -107,7 +292,7 @@ function buildOpRows(msgId) {
   const rsvp = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`op_accept:${msgId}`  ).setEmoji('✅').setStyle(ButtonStyle.Success  ),
     new ButtonBuilder().setCustomId(`op_decline:${msgId}` ).setEmoji('❌').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`op_tentative:${msgId}`).setEmoji('❓').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`op_tentative:${msgId}`).setEmoji('❓').setStyle(ButtonStyle.Primary),
   );
   const mgmt = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`op_edit:${msgId}`  ).setLabel('Edit'  ).setStyle(ButtonStyle.Primary),
@@ -144,6 +329,10 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .setDMPermission(false),
 
+  init(client) {
+    scheduleAllOperationReminders(client);
+  },
+
   async execute(interaction) {
     if (!isOfficer(interaction.member)) {
       return interaction.reply({ content: 'Only Officers and Commanders can create operations.', ephemeral: true });
@@ -161,7 +350,7 @@ module.exports = {
         new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000)
       ),
       new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('time').setLabel('Date & Time (DD/MM/YYYY HH:MM)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('28/05/2026 19:00')
+        new TextInputBuilder().setCustomId('time').setLabel('Date/time + optional timezone').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('28/05/2026 19:00 or 28/05/2026 19:00 EST')
       ),
     );
 
@@ -191,6 +380,7 @@ module.exports = {
 
       saveOp(interaction.guildId, msgId, op);
       await refreshOpMessage(interaction, op, msgId);
+      scheduleOperationReminder(interaction.client, interaction.guildId, msgId, op);
 
       const labels = { accepted: '✅ Accepted', declined: '❌ Declined', tentative: '❓ Tentative' };
       const msg = alreadyIn
@@ -205,12 +395,7 @@ module.exports = {
         return interaction.reply({ content: 'Only Officers, Commanders or the creator can edit operations.', ephemeral: true });
       }
 
-      const date = new Date(op.time);
-      const dd   = String(date.getDate()).padStart(2, '0');
-      const mm   = String(date.getMonth() + 1).padStart(2, '0');
-      const yyyy = date.getFullYear();
-      const hh   = String(date.getHours()).padStart(2, '0');
-      const min  = String(date.getMinutes()).padStart(2, '0');
+      const timeValue = formatDateTimeForInput(op.time);
 
       const modal = new ModalBuilder()
         .setCustomId(`op_edit_modal:${msgId}`)
@@ -224,7 +409,7 @@ module.exports = {
           new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000).setValue(op.description)
         ),
         new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('time').setLabel('Date & Time (DD/MM/YYYY HH:MM)').setStyle(TextInputStyle.Short).setRequired(true).setValue(`${dd}/${mm}/${yyyy} ${hh}:${min}`)
+          new TextInputBuilder().setCustomId('time').setLabel('Date/time + optional timezone').setStyle(TextInputStyle.Short).setRequired(true).setValue(timeValue)
         ),
       );
 
@@ -252,6 +437,7 @@ module.exports = {
       }
 
       deleteOp(interaction.guildId, msgId);
+      clearReminder(interaction.guildId, msgId);
       return interaction.reply({ content: '🗑️ Operation deleted.', ephemeral: true });
     }
   },
@@ -268,7 +454,7 @@ module.exports = {
 
       const parsedDate = parseDateTime(timeStr);
       if (!parsedDate || isNaN(parsedDate.getTime())) {
-        return interaction.reply({ content: '❌ Invalid date format. Please use `DD/MM/YYYY HH:MM` (e.g. `28/05/2026 19:00`).', ephemeral: true });
+        return interaction.reply({ content: '❌ Invalid date format. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -290,6 +476,7 @@ module.exports = {
         createdAt:     Date.now(),
         channelId:     opsChannel.id,
         threadId:      null,
+        reminderSent:   false,
         attendees:     { accepted: [], declined: [], tentative: [] },
       };
 
@@ -312,6 +499,7 @@ module.exports = {
       }
 
       saveOp(interaction.guildId, msg.id, op);
+      scheduleOperationReminder(interaction.client, interaction.guildId, msg.id, op);
 
       return interaction.editReply(`✅ Operation **${title}** posted in ${opsChannel}!`);
     }
@@ -327,13 +515,15 @@ module.exports = {
 
       const parsedDate = parseDateTime(timeStr);
       if (!parsedDate || isNaN(parsedDate.getTime())) {
-        return interaction.reply({ content: '❌ Invalid date format. Please use `DD/MM/YYYY HH:MM`.', ephemeral: true });
+        return interaction.reply({ content: '❌ Invalid date format. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
       }
 
       op.title       = title;
       op.description = description;
       op.time        = parsedDate.getTime();
+      op.reminderSent = false;
       saveOp(interaction.guildId, msgId, op);
+      scheduleOperationReminder(interaction.client, interaction.guildId, msgId, op);
 
       await refreshOpMessage(interaction, op, msgId);
 
