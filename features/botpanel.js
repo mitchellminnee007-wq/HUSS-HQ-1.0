@@ -15,10 +15,14 @@ const { getConfig, getAllConfig } = require('../utils/config');
 
 const DEFAULT_PANEL_CHANNEL_ID = '1509618529274560733';
 const OFFICER_RANKS    = ['Officer', 'Commander'];
-const WAR_ROLE_ID      = '1424722021325082625';
+const DEFAULT_WAR_ROLE_ID = '1424722021325082625';
 
 function isOfficer(member) {
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
+}
+
+function getWarRoleId(guildId) {
+  return getConfig(guildId, 'ACTIVE_WAR_ROLE_ID') ?? DEFAULT_WAR_ROLE_ID;
 }
 
 // ── Kill count store (mirrors killcount.js) ───────────────────────────────────
@@ -127,12 +131,12 @@ function buildTicketPanelRow() {
 
 // ── War sign-up embed + row (mirrors activemember.js) ─────────────────────────
 function buildSignupEmbed(guild) {
-  const role     = guild.roles.cache.get(WAR_ROLE_ID);
-  const roleName = role ? role.name : 'Active War';
+  const role     = guild.roles.cache.get(getWarRoleId(guild.id));
+  const roleName = role ? role.name : 'Activity Check';
   return new EmbedBuilder()
     .setColor(0xE74C3C)
-    .setTitle('⚔️ War Sign-Up')
-    .setDescription(`A war is being organised!\nClick **Join War** below to add yourself to the **${roleName}** roster.\nClick again to remove yourself.`)
+    .setTitle('Activity Check')
+    .setDescription(`We are preparing for a new war and need to know who is ready to ride.\n\nClick **Mark Active** below to add yourself to the **${roleName}** roster.\nClick again to remove yourself.`)
     .setFooter({ text: 'Powered by Hypha' })
     .setTimestamp();
 }
@@ -140,8 +144,8 @@ function buildSignupEmbed(guild) {
 function buildSignupRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('activemember_join')
-      .setLabel('⚔️ Join War')
+      .setCustomId('activitycheck_join')
+      .setLabel('Mark Active')
       .setStyle(ButtonStyle.Danger),
   );
 }
@@ -209,7 +213,7 @@ function buildKCStartModal() {
 function buildSignupChannelModal() {
   return new ModalBuilder()
     .setCustomId('bp_activemember_modal')
-    .setTitle('Post War Sign-Up')
+    .setTitle('Post Activity Check')
     .addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
@@ -230,7 +234,7 @@ function buildPanelEmbed() {
     .setTitle('⚙️ Officer Control Panel')
     .setDescription('Quick access to all officer actions. All buttons are officer-only.')
     .addFields(
-      { name: '\u2694\ufe0f Operations & Wars', value: '\ud83d\udccb Create an operation event\n\ud83c\udf93 Create a training event\n\ud83c\udfaf Start a kill count tracker\n\u2694\ufe0f Post the war sign-up panel in any channel' },
+      { name: '\u2694\ufe0f Operations & Wars', value: '\ud83d\udccb Create an operation event\n\ud83c\udf93 Create a training event\n\ud83c\udfaf Start a kill count tracker\n\u2694\ufe0f Post the activity check panel in any channel' },
       { name: '🎫 Tickets',           value: '🎫 Post the ticket panel in the verification channel' },
       { name: '🔄 Rollover',          value: '⏳ Schedule the 4-day collie rollover\n✋ Cancel a pending rollover' },
       { name: '⚙️ Config',            value: '⚙️ View current bot configuration for this server' },
@@ -243,7 +247,7 @@ function buildPanelRows() {
     new ButtonBuilder().setCustomId('bp_operation'    ).setLabel('Create Operation').setEmoji('📋').setStyle(ButtonStyle.Primary  ),
     new ButtonBuilder().setCustomId('bp_training'     ).setLabel('Create Training' ).setEmoji('🎓').setStyle(ButtonStyle.Primary  ),
     new ButtonBuilder().setCustomId('bp_killcount'    ).setLabel('Start Kill Count').setEmoji('🎯').setStyle(ButtonStyle.Primary  ),
-    new ButtonBuilder().setCustomId('bp_activemember' ).setLabel('War Sign-Up'     ).setEmoji('⚔️').setStyle(ButtonStyle.Success  ),
+    new ButtonBuilder().setCustomId('bp_activemember' ).setLabel('Activity Check'  ).setEmoji('⚔️').setStyle(ButtonStyle.Success  ),
     new ButtonBuilder().setCustomId('bp_ticketpanel'  ).setLabel('Ticket Panel'    ).setEmoji('🎫').setStyle(ButtonStyle.Secondary),
   );
   const row2 = new ActionRowBuilder().addComponents(
@@ -447,7 +451,7 @@ module.exports = {
     // ── War sign-up ─────────────────────────────────────────────────────────
     if (interaction.customId === 'bp_activemember_modal') {
       if (!isOfficer(interaction.member)) {
-        return interaction.reply({ content: '🚫 Only Officers and Commanders can post the war sign-up.', ephemeral: true });
+        return interaction.reply({ content: 'Only Officers and Commanders can post an activity check.', ephemeral: true });
       }
 
       const raw = interaction.fields.getTextInputValue('signup_channel').trim();
@@ -464,7 +468,7 @@ module.exports = {
       }
 
       await channel.send({ embeds: [buildSignupEmbed(interaction.guild)], components: [buildSignupRow()] });
-      return interaction.editReply(`✅ War sign-up posted in ${channel}.`);
+      return interaction.editReply(`Activity check posted in ${channel}.`);
     }
   },
 };

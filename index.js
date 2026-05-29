@@ -80,13 +80,13 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    if (handlerName === 'activemember_join') {
-      const command = client.commands.get('activemember');
+    if (handlerName === 'activitycheck_join') {
+      const command = client.commands.get('activitycheck');
       if (command && typeof command.handleButton === 'function') {
         try {
           await command.handleButton(interaction);
         } catch (error) {
-          console.error('Error handling war sign-up button:', error);
+          console.error('Error handling activity check button:', error);
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'There was an error processing your request!', ephemeral: true });
           } else {

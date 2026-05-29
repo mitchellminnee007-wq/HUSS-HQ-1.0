@@ -55,6 +55,10 @@ function getAllConfig(guildId) {
     'OPERATIONS_CHANNEL_ID',
     'TRAININGS_CHANNEL_ID',
     'KILLCOUNT_CHANNEL_ID',
+    'ACTIVE_WAR_ROLE_ID',
+    'COLLIE_ROLE_ID',
+    'UNVERIFIED_ROLE_ID',
+    'FORMER_MEMBER_ROLE_ID',
     'WELCOME_IMAGE_URL'
   ];
   const result = {};

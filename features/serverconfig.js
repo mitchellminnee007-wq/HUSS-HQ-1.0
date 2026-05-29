@@ -14,6 +14,13 @@ const CHANNEL_SETTINGS = [
   { name: 'Kill Count Channel',     value: 'KILLCOUNT_CHANNEL_ID' },
 ];
 
+const ROLE_SETTINGS = [
+  { name: 'Active War Role',    value: 'ACTIVE_WAR_ROLE_ID' },
+  { name: 'Collie Role',        value: 'COLLIE_ROLE_ID' },
+  { name: 'Unverified Role',    value: 'UNVERIFIED_ROLE_ID' },
+  { name: 'Former Member Role', value: 'FORMER_MEMBER_ROLE_ID' },
+];
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('config')
@@ -35,6 +42,23 @@ module.exports = {
           opt.setName('channel')
             .setDescription('The channel to use')
             .addChannelTypes(ChannelType.GuildText)
+            .setRequired(true)
+        )
+    )
+
+    // /config set-role
+    .addSubcommand(sub =>
+      sub.setName('set-role')
+        .setDescription('Assign a role to a bot feature.')
+        .addStringOption(opt =>
+          opt.setName('setting')
+            .setDescription('Which role to configure')
+            .setRequired(true)
+            .addChoices(...ROLE_SETTINGS)
+        )
+        .addRoleOption(opt =>
+          opt.setName('role')
+            .setDescription('The role to use')
             .setRequired(true)
         )
     )
@@ -73,6 +97,20 @@ module.exports = {
       });
     }
 
+    // ── /config set-role ────────────────────────────────────────────────────
+    if (sub === 'set-role') {
+      const key   = interaction.options.getString('setting', true);
+      const role  = interaction.options.getRole('role', true);
+      const label = ROLE_SETTINGS.find(s => s.value === key)?.name ?? key;
+
+      setConfig(interaction.guildId, key, role.id);
+
+      return interaction.reply({
+        content: `✅ **${label}** has been set to ${role}.`,
+        ephemeral: true
+      });
+    }
+
     // ── /config set-image ───────────────────────────────────────────────────
     if (sub === 'set-image') {
       const url = interaction.options.getString('url', true);
@@ -99,11 +137,18 @@ module.exports = {
         inline: true
       }));
 
+      const roleFields = ROLE_SETTINGS.map(s => ({
+        name: s.name,
+        value: cfg[s.value] ? `<@&${cfg[s.value]}>` : '*Not set*',
+        inline: true
+      }));
+
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('⚙️ Server Configuration')
         .addFields(
           ...channelFields,
+          ...roleFields,
           { name: 'Welcome Image', value: cfg.WELCOME_IMAGE_URL ? `[Link](${cfg.WELCOME_IMAGE_URL})` : '*Not set*', inline: true }
         )
         .setFooter({ text: 'Use /config set-channel or /config set-image to update • Powered by Hypha' })
