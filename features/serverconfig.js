@@ -15,10 +15,11 @@ const CHANNEL_SETTINGS = [
 ];
 
 const ROLE_SETTINGS = [
-  { name: 'Active War Role',    value: 'ACTIVE_WAR_ROLE_ID' },
-  { name: 'Collie Role',        value: 'COLLIE_ROLE_ID' },
-  { name: 'Unverified Role',    value: 'UNVERIFIED_ROLE_ID' },
-  { name: 'Former Member Role', value: 'FORMER_MEMBER_ROLE_ID' },
+  { name: 'Active War Role',         value: 'ACTIVE_WAR_ROLE_ID' },
+  { name: 'Collie Role',             value: 'COLLIE_ROLE_ID' },
+  { name: 'Unverified Role',         value: 'UNVERIFIED_ROLE_ID' },
+  { name: 'Former Member Role',      value: 'FORMER_MEMBER_ROLE_ID' },
+  { name: 'Recruitment Officer Role', value: 'RECRUITMENT_OFFICER_ROLE_ID' },
 ];
 
 module.exports = {

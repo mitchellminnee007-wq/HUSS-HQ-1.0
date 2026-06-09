@@ -63,7 +63,11 @@ function deleteTicket(guildId, channelId) {
   }
 }
 
-function isOfficer(member) {
+function isRecruitmentOfficer(member) {
+  const recruitmentRoleId = getConfig(member.guild.id, 'RECRUITMENT_OFFICER_ROLE_ID');
+  if (recruitmentRoleId) {
+    return member.roles.cache.has(recruitmentRoleId);
+  }
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
 }
 
@@ -126,7 +130,7 @@ async function openTicket(interaction, type) {
   const existing = Object.entries(store.guilds[guildId] || {})
     .find(([, t]) => t.userId === user.id && t.type === type);
   if (existing) {
-    return interaction.editReply({ content: `You already have an open **${TICKET_TYPES[type].label}** ticket: <#${existing[0]}>. Please use that one or ask an officer to close it first.` });
+    return interaction.editReply({ content: `You already have an open **${TICKET_TYPES[type].label}** ticket: <#${existing[0]}>. Please use that one or ask a recruitment officer to close it first.` });
   }
 
   const priority    = 'low';
@@ -152,7 +156,7 @@ async function openTicket(interaction, type) {
     }
   }
 
-  // Permission overwrites — only ticket creator + officers + the bot itself can see
+  // Permission overwrites — only ticket creator + recruitment officers + the bot itself can see
   const overwrites = [
     { id: guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
     {
@@ -171,8 +175,9 @@ async function openTicket(interaction, type) {
     },
   ];
 
-  for (const rank of OFFICER_RANKS) {
-    const role = guild.roles.cache.find(r => r.name === rank);
+  const recruitmentRoleId = getConfig(guildId, 'RECRUITMENT_OFFICER_ROLE_ID');
+  if (recruitmentRoleId) {
+    const role = guild.roles.cache.get(recruitmentRoleId) || await guild.roles.fetch(recruitmentRoleId).catch(() => null);
     if (role) {
       overwrites.push({
         id: role.id,
@@ -183,6 +188,23 @@ async function openTicket(interaction, type) {
           PermissionFlagsBits.ManageMessages,
         ],
       });
+    } else {
+      console.warn(`[Tickets] Recruitment officer role ID ${recruitmentRoleId} not found in guild ${guildId}. Ticket access may be restricted.`);
+    }
+  } else {
+    for (const rank of OFFICER_RANKS) {
+      const role = guild.roles.cache.find(r => r.name === rank);
+      if (role) {
+        overwrites.push({
+          id: role.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.ManageMessages,
+          ],
+        });
+      }
     }
   }
 
@@ -208,12 +230,12 @@ async function openTicket(interaction, type) {
 
   // Send the ticket info + action buttons inside the ticket channel
   await channel.send({
-    content: `<@${user.id}> Your ticket has been created. An officer will be with you shortly.`,
+    content: `<@${user.id}> Your ticket has been created. A recruitment officer will be with you shortly.`,
     embeds:     [buildTicketEmbed(ticket)],
     components: [buildActionRow(channel.id)],
   });
 
-  // Notify the officer channel so officers see the new ticket
+  // Notify the officer channel so recruitment officers see the new ticket
   const officerChannelId = getConfig(guildId, 'OFFICER_CHANNEL_ID');
   if (officerChannelId) {
     const officerChannel = guild.channels.cache.get(officerChannelId)
@@ -311,7 +333,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle('🎫 Support Tickets')
-      .setDescription('Choose a category below to open a ticket.\nOur officers will assist you as soon as possible.')
+      .setDescription('Choose a category below to open a ticket.\nOur recruitment officers will assist you as soon as possible.')
       .addFields(
         { name: '✅ Verification',     value: 'Get verified as a member of the guild.' },
         { name: '🤝 Ally Request',     value: 'Request an alliance with our group.' },
@@ -356,8 +378,8 @@ module.exports = {
 
     // Claim
     if (action === 'ticket_claim') {
-      if (!isOfficer(interaction.member)) {
-        return interaction.reply({ content: 'Only Officers and Commanders can claim tickets.', ephemeral: true });
+      if (!isRecruitmentOfficer(interaction.member)) {
+        return interaction.reply({ content: 'Only recruitment officers can claim tickets.', ephemeral: true });
       }
       ticket.claimedBy = interaction.user.id;
       saveTicket(interaction.guildId, channelId, ticket);
@@ -373,8 +395,8 @@ module.exports = {
 
     // Change Priority — send ephemeral select menu
     if (action === 'ticket_priority') {
-      if (!isOfficer(interaction.member)) {
-        return interaction.reply({ content: 'Only Officers and Commanders can change ticket priority.', ephemeral: true });
+      if (!isRecruitmentOfficer(interaction.member)) {
+        return interaction.reply({ content: 'Only recruitment officers can change ticket priority.', ephemeral: true });
       }
       const select = new StringSelectMenuBuilder()
         .setCustomId(`ticket_priority_select:${channelId}`)

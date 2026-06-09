@@ -119,6 +119,21 @@ function markAutomatedVoteThisMonth(record) {
   record.automatedVoteMonths.push(currentMonthKey());
 }
 
+function oldestActiveWarning(record) {
+  return record.warnings
+    .filter(w => !w.forgivenAt)
+    .sort((a, b) => a.createdAt - b.createdAt)[0] || null;
+}
+
+function hasAutomaticForgivenessThisMonth(record) {
+  return record.automaticForgivenessMonths?.includes(currentMonthKey());
+}
+
+function markAutomaticForgivenessThisMonth(record) {
+  record.automaticForgivenessMonths ??= [];
+  record.automaticForgivenessMonths.push(currentMonthKey());
+}
+
 function canStartRemovalVote(record, guildStore, targetId) {
   const warning = latestActiveWarning(record);
   if (!warning) {
@@ -186,6 +201,34 @@ async function dischargeMember(member) {
       ...(!formerCollieRole ? ['Former collie'] : [])
     ]
   };
+}
+
+async function demoteMember(member) {
+  const currentRank = getMemberRank(member);
+  const rolesToRemove = getRankRoles(member);
+
+  if (rolesToRemove.length) {
+    await member.roles.remove(rolesToRemove);
+  }
+
+  if (!currentRank) {
+    return { missingRoles: [] };
+  }
+
+  const idx = ranks.indexOf(currentRank);
+  // If already at lowest rank (Cadet) remove rank roles and leave unranked
+  if (idx <= 0) {
+    return { missingRoles: [] };
+  }
+
+  const newRank = ranks[idx - 1];
+  const newRole = getRoleByName(member.guild, newRank);
+  if (newRole) {
+    await member.roles.add(newRole);
+    return { missingRoles: [] };
+  }
+
+  return { missingRoles: [newRank] };
 }
 
 async function syncWarningRoles(member, warningCount) {
@@ -312,6 +355,48 @@ async function sendAutomatedRemovalVotes(client) {
   }
 }
 
+async function sendAutomaticForgiveness(client) {
+  const store = readStore();
+  let changed = false;
+
+  for (const [guildId, guildStore] of Object.entries(store.guilds)) {
+    const guild = await client.guilds.fetch(guildId).catch(() => null);
+    if (!guild) continue;
+
+    const officerChannelId = getConfig(guildId, 'OFFICER_CHANNEL_ID');
+    const channel = officerChannelId ? await guild.channels.fetch(officerChannelId).catch(() => null) : null;
+
+    for (const [targetId, record] of Object.entries(guildStore.members || {})) {
+      if (hasAutomaticForgivenessThisMonth(record)) continue;
+
+      const warning = oldestActiveWarning(record);
+      if (!warning) continue;
+      if (Date.now() - warning.createdAt < warningForgiveAgeMs) continue;
+
+      // Forgive the oldest active warning
+      warning.forgivenAt = Date.now();
+      warning.forgivenBy = client.user?.id || 'system';
+      markAutomaticForgivenessThisMonth(record);
+      changed = true;
+
+      // Try to sync roles for the member if available
+      const member = await guild.members.fetch(targetId).catch(() => null);
+      if (member) {
+        await syncWarningRoles(member, activeWarningCount(record)).catch(() => {});
+      }
+
+      // Notify officer channel if configured
+      if (channel && channel.isTextBased()) {
+        channel.send({ content: `Automatically removed one warning from <@${targetId}>.`, allowedMentions: { parse: [] } }).catch(() => {});
+      }
+    }
+  }
+
+  if (changed) {
+    writeStore(store);
+  }
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('warning')
@@ -339,11 +424,21 @@ module.exports = {
         console.error('Error sending automated warning removal votes:', error);
       });
 
+      await sendAutomaticForgiveness(client).catch(error => {
+        console.error('Error running automatic forgiveness:', error);
+      });
+
       setInterval(() => {
         sendAutomatedRemovalVotes(client).catch(error => {
           console.error('Error sending automated warning removal votes:', error);
         });
       }, checkIntervalMs);
+
+      setInterval(() => {
+        sendAutomaticForgiveness(client).catch(error => {
+          console.error('Error running automatic forgiveness:', error);
+        });
+      }, oneDayMs);
     });
   },
 
@@ -377,8 +472,11 @@ module.exports = {
 
     if (warningCount === 2) {
       missingWarningRoles = await syncWarningRoles(target, warningCount);
-      await target.timeout(oneDayMs, `Second warning: ${reason}`);
-      consequence = '1 day timeout.';
+      const demotion = await demoteMember(target);
+      if (demotion && demotion.missingRoles?.length) {
+        missingRoles.push(...demotion.missingRoles);
+      }
+      consequence = 'Demoted by one rank.';
     } else if (warningCount >= 3) {
       const discharge = await dischargeMember(target);
       missingRoles.push(...discharge.missingRoles);
