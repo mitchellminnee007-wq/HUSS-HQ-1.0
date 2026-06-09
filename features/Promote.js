@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { getConfig } = require('../utils/config.js');
 
 const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
 const highestOfficerPromoteIndex = ranks.indexOf('Dragoon');
@@ -79,6 +80,13 @@ module.exports = {
     const rolesToRemove = getMemberRankRoles(target)
       .map(rank => getRankRole(interaction.guild, rank))
       .filter(Boolean);
+
+    const formerMemberRoleId = getConfig(interaction.guildId, 'FORMER_MEMBER_ROLE_ID');
+    const formerMemberRole = formerMemberRoleId ? interaction.guild.roles.cache.get(formerMemberRoleId) : null;
+    
+    if (formerMemberRole && target.roles.cache.has(formerMemberRole.id)) {
+      rolesToRemove.push(formerMemberRole);
+    }
 
     if (rolesToRemove.length) {
       await target.roles.remove(rolesToRemove);

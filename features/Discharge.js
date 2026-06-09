@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { getConfig } = require('../utils/config.js');
 
 const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
 
@@ -55,6 +56,9 @@ module.exports = {
       return interaction.reply({ content: 'The role "unverified" does not exist on this server.', ephemeral: true });
     }
 
+    const formerMemberRoleId = getConfig(interaction.guildId, 'FORMER_MEMBER_ROLE_ID');
+    const formerMemberRole = formerMemberRoleId ? interaction.guild.roles.cache.get(formerMemberRoleId) : null;
+
     const targetRank = getMemberRank(target);
     if (targetRank && !canAffectRank(executorRank, targetRank)) {
       return interaction.reply({ content: 'Officers cannot discharge other Officers or the Commander.', ephemeral: true });
@@ -74,8 +78,15 @@ module.exports = {
       await target.roles.remove(rolesToRemove);
     }
 
-    if (!target.roles.cache.has(unverifiedRole.id)) {
-      await target.roles.add(unverifiedRole);
+    const rolesToAdd = [unverifiedRole];
+    if (formerMemberRole) {
+      rolesToAdd.push(formerMemberRole);
+    }
+
+    for (const role of rolesToAdd) {
+      if (!target.roles.cache.has(role.id)) {
+        await target.roles.add(role);
+      }
     }
 
     const removedRankRole = targetRank ? getRoleByName(interaction.guild, targetRank) : null;
@@ -85,10 +96,12 @@ module.exports = {
       ...(memberRole && rolesToRemove.some(role => role.id === memberRole.id) ? [`${memberRole}`] : [])
     ].join(' and ');
 
+    const addedRoles = [unverifiedRole.toString(), ...(formerMemberRole ? [formerMemberRole.toString()] : [])].join(' and ');
+
     const embed = new EmbedBuilder()
       .setTitle('Discharge Complete')
       .setColor('#FF0000')
-      .setDescription(`${target.user.tag} has been discharged. Removed ${removedRoles} and added ${unverifiedRole}.`)
+      .setDescription(`${target.user.tag} has been discharged. Removed ${removedRoles} and added ${addedRoles}.`)
       .setFooter({ text: `Discharged by ${executor.user.tag}` })
       .setTimestamp();
 
@@ -100,7 +113,8 @@ module.exports = {
         roles: [
           unverifiedRole.id,
           ...(removedRankRole ? [removedRankRole.id] : []),
-          ...(memberRole ? [memberRole.id] : [])
+          ...(memberRole ? [memberRole.id] : []),
+          ...(formerMemberRole ? [formerMemberRole.id] : [])
         ]
       },
       ephemeral: false
