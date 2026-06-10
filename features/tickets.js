@@ -79,7 +79,7 @@ function sanitizeName(str) {
 function buildTicketEmbed(ticket) {
   const prio = PRIORITIES[ticket.priority];
   const type = TICKET_TYPES[ticket.type];
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(prio.color)
     .setTitle(`${type.emoji} ${type.label} Ticket`)
     .addFields(
@@ -89,6 +89,12 @@ function buildTicketEmbed(ticket) {
     )
     .setFooter({ text: 'Powered by Hypha' })
     .setTimestamp(ticket.createdAt);
+
+  if ((ticket.type === 'verify' || ticket.type === 'ally') && fs.existsSync(path.join(__dirname, '..', 'Supporting things', 'F1Screenshot.png'))) {
+    embed.setImage('attachment://F1Screenshot.png');
+  }
+
+  return embed;
 }
 
 // ── Action buttons (inside ticket) ───────────────────────────────────────────
@@ -236,11 +242,43 @@ async function openTicket(interaction, type) {
   saveTicket(guildId, channel.id, ticket);
 
   // Send the ticket info + action buttons inside the ticket channel
-  await channel.send({
+  const messagePayload = {
     content: `<@${user.id}> Your ticket has been created. A recruitment officer will be with you shortly.\nVotre ticket a été créé. Un officier de recrutement s'occupera de vous bientôt.`,
     embeds:     [buildTicketEmbed(ticket)],
     components: [buildActionRow(channel.id)],
-  });
+  };
+
+  if ((type === 'verify' || type === 'ally')) {
+    const screenshotPath = path.join(__dirname, '..', 'Supporting things', 'F1Screenshot.png');
+    if (fs.existsSync(screenshotPath)) {
+      messagePayload.files = [{ attachment: screenshotPath, name: 'F1Screenshot.png' }];
+    }
+  }
+
+  await channel.send(messagePayload);
+
+  // Send context-specific instructions
+  if (type === 'verify') {
+    await channel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('Verification Instructions')
+          .setDescription('To verify as a member, please:\n1. Take a screenshot of your F1 stats (shown above)\n2. Post it in this ticket\n3. Wait for an officer to review and approve\n\nPour vérifier en tant que membre, veuillez:\n1. Faire une capture d\'écran de vos statistiques F1 (affichées ci-dessus)\n2. La publier dans ce ticket\n3. Attendre qu\'un officier examine et approuve')
+          .setFooter({ text: 'Thank you for joining us!' })
+      ]
+    });
+  } else if (type === 'ally') {
+    await channel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('Ally Request Instructions')
+          .setDescription('To request an alliance:\n1. Provide your clan/group name\n2. Tell us about your group\n3. Post the F1 screenshot (shown above)\n4. Wait for officer review\n\nPour demander une alliance:\n1. Fournissez le nom de votre clan/groupe\n2. Parlez-nous de votre groupe\n3. Postez la capture d\'écran F1 (affichée ci-dessus)\n4. Attendez l\'examen des officiers')
+          .setFooter({ text: 'We look forward to collaborating!' })
+      ]
+    });
+  }
 
   // Notify the officer channel so recruitment officers see the new ticket
   const officerChannelId = getConfig(guildId, 'OFFICER_CHANNEL_ID');
