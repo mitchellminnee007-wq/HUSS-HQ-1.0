@@ -333,11 +333,11 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle('🎫 Support Tickets')
-      .setDescription('Choose a category below to open a ticket.\nOur recruitment officers will assist you as soon as possible.')
+      .setDescription('Choose a category below to open a ticket.\nOur recruitment officers will assist you as soon as possible.\nChoisissez une catégorie ci-dessous pour ouvrir un ticket. Nos officiers de recrutement vous aideront dès que possible.')
       .addFields(
-        { name: '✅ Verification',     value: 'Get verified as a member of the guild.' },
-        { name: '🤝 Ally Request',     value: 'Request an alliance with our group.' },
-        { name: '🎖️ Officer Question', value: 'Ask the officer team a private question.' },
+        { name: '✅ Verification',     value: 'Get verified as a member of the guild. / Obtenez votre vérification en tant que membre du clan.' },
+        { name: '🤝 Ally Request',     value: 'Request an alliance with our group. / Demandez une alliance avec notre groupe.' },
+        { name: '🎖️ Officer Question', value: 'Ask the officer team a private question. / Posez une question privée à l’équipe des officiers.' },
       )
       .setFooter({ text: 'Powered by Hypha' });
 
