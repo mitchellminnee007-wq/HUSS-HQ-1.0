@@ -16,31 +16,35 @@ module.exports = (client) => {
       const verificationChannelId  = getConfig(member.guild.id, 'VERIFICATION_CHANNEL_ID');
       const rulesChannelId         = getConfig(member.guild.id, 'RULES_CHANNEL_ID');
 
-      if (!welcomeChannelId) {
-        console.warn('WELCOME_CHANNEL_ID not configured; skipping welcome message.');
-        return;
+      const unverifiedRoleId = getConfig(member.guild.id, 'UNVERIFIED_ROLE_ID');
+      let unverifiedRole = null;
+      if (unverifiedRoleId) {
+        unverifiedRole = member.guild.roles.cache.get(unverifiedRoleId)
+          || await member.guild.roles.fetch(unverifiedRoleId).catch(() => null);
       }
-
-      const channel = await member.guild.channels.fetch(welcomeChannelId).catch(() => null);
-      if (!channel) {
-        console.warn('Could not find welcome channel with ID', welcomeChannelId);
-        return;
-      }
-
-      let unverifiedRole = member.guild.roles.cache.get('1386229683963826346')
-        || getRoleByName(member.guild, 'unverified');
       if (!unverifiedRole) {
-        // Cache may not be populated yet — fetch directly
-        unverifiedRole = await member.guild.roles.fetch('1386229683963826346').catch(() => null);
+        unverifiedRole = getRoleByName(member.guild, 'unverified');
       }
       if (unverifiedRole && !member.roles.cache.has(unverifiedRole.id)) {
-        await member.roles.add(unverifiedRole).catch(err => console.error('Failed to add unverified role:', err));
+        await member.roles.add(unverifiedRole).catch(err => console.error('Failed to add unverified role to new member:', err));
       } else if (!unverifiedRole) {
         console.warn('Could not find unverified role.');
       }
 
       const verificationMention = verificationChannelId ? `<#${verificationChannelId}>` : 'the verification channel';
       const rulesMention = rulesChannelId ? `<#${rulesChannelId}>` : 'the rules channel';
+
+      if (!welcomeChannelId) {
+        console.warn('WELCOME_CHANNEL_ID not configured; skipping welcome message.');
+        return;
+      }
+
+      const channel = member.guild.channels.cache.get(welcomeChannelId)
+        || await member.guild.channels.fetch(welcomeChannelId).catch(() => null);
+      if (!channel) {
+        console.warn('Could not find welcome channel with ID', welcomeChannelId);
+        return;
+      }
 
       const embed = new EmbedBuilder()
         .setTitle(`Welcome to ${member.guild.name}`)

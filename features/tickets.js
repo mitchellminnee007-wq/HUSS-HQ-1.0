@@ -125,12 +125,19 @@ async function openTicket(interaction, type) {
   const user    = interaction.user;
   const guildId = guild.id;
 
-  // Prevent duplicate open tickets of the same type
+  // Prevent duplicate open tickets of the same type, but remove stale records for deleted channels
   const store = readStore();
   const existing = Object.entries(store.guilds[guildId] || {})
     .find(([, t]) => t.userId === user.id && t.type === type);
   if (existing) {
-    return interaction.editReply({ content: `You already have an open **${TICKET_TYPES[type].label}** ticket: <#${existing[0]}>. Please use that one or ask a recruitment officer to close it first.` });
+    const [existingChannelId] = existing;
+    const existingChannel = guild.channels.cache.get(existingChannelId)
+      || await guild.channels.fetch(existingChannelId).catch(() => null);
+    if (!existingChannel) {
+      deleteTicket(guildId, existingChannelId);
+    } else {
+      return interaction.editReply({ content: `You already have an open **${TICKET_TYPES[type].label}** ticket: <#${existingChannelId}>. Please use that one or ask a recruitment officer to close it first.` });
+    }
   }
 
   const priority    = 'low';
@@ -230,7 +237,7 @@ async function openTicket(interaction, type) {
 
   // Send the ticket info + action buttons inside the ticket channel
   await channel.send({
-    content: `<@${user.id}> Your ticket has been created. A recruitment officer will be with you shortly.`,
+    content: `<@${user.id}> Your ticket has been created. A recruitment officer will be with you shortly.\nVotre ticket a été créé. Un officier de recrutement s'occupera de vous bientôt.`,
     embeds:     [buildTicketEmbed(ticket)],
     components: [buildActionRow(channel.id)],
   });
@@ -335,9 +342,9 @@ module.exports = {
       .setTitle('🎫 Support Tickets')
       .setDescription('Choose a category below to open a ticket.\nOur recruitment officers will assist you as soon as possible.\nChoisissez une catégorie ci-dessous pour ouvrir un ticket. Nos officiers de recrutement vous aideront dès que possible.')
       .addFields(
-        { name: '✅ Verification',     value: 'Get verified as a member of the guild. / Obtenez votre vérification en tant que membre du régiment.' },
-        { name: '🤝 Ally Request',     value: 'Request an alliance with our régiment. / Demandez une alliance avec notre régiment.' },
-        { name: '🎖️ Officer Question', value: 'Ask the officer team a private question. / Posez une question à l’équipe des officiers.' },
+        { name: '✅ Verification',     value: 'Get verified as a member of the guild. / Obtenez votre vérification en tant que membre du clan.' },
+        { name: '🤝 Ally Request',     value: 'Request an alliance with our group. / Demandez une alliance avec notre groupe.' },
+        { name: '🎖️ Officer Question', value: 'Ask the officer team a private question. / Posez une question privée aux officiers.' },
       )
       .setFooter({ text: 'Powered by Hypha' });
 
