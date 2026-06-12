@@ -63,6 +63,34 @@ function deleteTicket(guildId, channelId) {
   }
 }
 
+const TRANSCRIPT_DIR = path.join(__dirname, '..', 'data', 'ticket-transcripts');
+
+function ensureTranscriptDir() {
+  if (!fs.existsSync(TRANSCRIPT_DIR)) fs.mkdirSync(TRANSCRIPT_DIR, { recursive: true });
+}
+
+function writeTranscript(filename, content) {
+  ensureTranscriptDir();
+  fs.writeFileSync(path.join(TRANSCRIPT_DIR, filename), content, 'utf8');
+}
+
+function cleanupOldTranscripts(maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
+  ensureTranscriptDir();
+  const files = fs.readdirSync(TRANSCRIPT_DIR);
+  const now = Date.now();
+  for (const file of files) {
+    const filePath = path.join(TRANSCRIPT_DIR, file);
+    try {
+      const stats = fs.statSync(filePath);
+      if (now - stats.mtimeMs > maxAgeMs) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {
+      // ignore cleanup failures
+    }
+  }
+}
+
 function isRecruitmentOfficer(member) {
   const recruitmentRoleId = getConfig(member.guild.id, 'RECRUITMENT_OFFICER_ROLE_ID');
   if (recruitmentRoleId) {
@@ -344,7 +372,115 @@ async function closeTicket(interaction, channelId, reason) {
         )
         .setFooter({ text: 'Powered by Hypha' })
         .setTimestamp();
-      await logChannel.send({ embeds: [logEmbed] }).catch(() => {});
+
+      const transcriptFilename = `ticket-${interaction.guildId}-${channelId}-${Date.now()}.html`;
+      let htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket Transcript - ${channel?.name ?? channelId}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #36393f; color: #dcddde; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .header { background: #2f3136; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .header h1 { color: #fff; font-size: 24px; margin-bottom: 8px; }
+    .header-info { font-size: 13px; color: #b9bbbe; line-height: 1.8; }
+    .info-row { display: flex; gap: 20px; margin-top: 10px; }
+    .info-item { display: flex; flex-direction: column; }
+    .info-label { color: #72767d; font-size: 12px; text-transform: uppercase; }
+    .info-value { color: #fff; font-size: 14px; margin-top: 4px; }
+    .messages { background: #36393f; border-radius: 8px; padding: 20px; }
+    .message { padding: 8px 0; border-bottom: 1px solid rgba(79, 84, 92, 0.4); }
+    .message:last-child { border-bottom: none; }
+    .message-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+    .message-author { color: #fff; font-weight: 600; font-size: 15px; }
+    .message-time { color: #72767d; font-size: 12px; }
+    .message-content { color: #dcddde; margin-left: 36px; word-wrap: break-word; }
+    .embed { background: rgba(79, 84, 92, 0.3); border-left: 4px solid #7289da; border-radius: 4px; padding: 8px 12px; margin-left: 36px; margin-top: 4px; font-size: 13px; }
+    .embed-title { font-weight: 600; color: #fff; }
+    .embed-desc { color: #b9bbbe; margin-top: 4px; }
+    .attachments { margin-left: 36px; margin-top: 4px; }
+    .attachment-link { color: #0096cf; text-decoration: none; font-size: 13px; display: inline-block; margin-right: 12px; }
+    .attachment-link:hover { text-decoration: underline; }
+    .divider { height: 1px; background: rgba(79, 84, 92, 0.5); margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1># ${channel?.name ?? channelId}</h1>
+      <div class="header-info">
+        <div class="info-row">
+          <div class="info-item">
+            <span class="info-label">Opened by</span>
+            <span class="info-value">&lt;@${ticket.userId}&gt;</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Type</span>
+            <span class="info-value">${type.emoji} ${type.label}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Priority</span>
+            <span class="info-value">${prio.label}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Closed by</span>
+            <span class="info-value">${interaction.user.tag}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Reason</span>
+            <span class="info-value">${reason ?? 'No reason provided'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="messages">`;
+
+      if (channel) {
+        const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+        if (messages) {
+          const ordered = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+          for (const msg of ordered) {
+            const author = msg.author?.tag ?? 'Unknown';
+            const timestamp = new Date(msg.createdTimestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            htmlContent += `<div class="message"><div class="message-header"><span class="message-author">${author}</span><span class="message-time">${timestamp}</span></div>`;
+            if (msg.content) {
+              htmlContent += `<div class="message-content">${msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+            }
+            if (msg.embeds.length) {
+              for (const embed of msg.embeds) {
+                htmlContent += `<div class="embed"><div class="embed-title">${embed.title || 'Embed'}</div>`;
+                if (embed.description) {
+                  htmlContent += `<div class="embed-desc">${embed.description}</div>`;
+                }
+                htmlContent += `</div>`;
+              }
+            }
+            if (msg.attachments.size) {
+              htmlContent += `<div class="attachments">`;
+              for (const attachment of msg.attachments.values()) {
+                htmlContent += `<a class="attachment-link" href="${attachment.url}" target="_blank">${attachment.name}</a>`;
+              }
+              htmlContent += `</div>`;
+            }
+            htmlContent += `</div>`;
+          }
+        }
+      }
+
+      htmlContent += `
+    </div>
+  </div>
+</body>
+</html>`;
+
+      writeTranscript(transcriptFilename, htmlContent);
+      cleanupOldTranscripts();
+
+      await logChannel.send({ embeds: [logEmbed], files: [{ attachment: path.join(TRANSCRIPT_DIR, transcriptFilename), name: transcriptFilename }] }).catch(() => {});
     }
   }
 
