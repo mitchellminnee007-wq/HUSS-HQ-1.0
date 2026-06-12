@@ -62,19 +62,21 @@ module.exports = (client) => {
 
       const welcomeImageUrl = getConfig(member.guild.id, 'WELCOME_IMAGE_URL');
       if (welcomeImageUrl) {
-        const isRemoteImage = /^https?:\/\//i.test(welcomeImageUrl) || /^attachment:/i.test(welcomeImageUrl);
+        const normalizedUrl = welcomeImageUrl.trim();
+        const isRemoteImage = /^https?:\/\//i.test(normalizedUrl) || /^attachment:/i.test(normalizedUrl);
         if (isRemoteImage) {
-          embed.setImage(welcomeImageUrl);
+          embed.setImage(normalizedUrl);
         } else {
-          const resolvedPath = path.isAbsolute(welcomeImageUrl)
-            ? welcomeImageUrl
-            : path.resolve(path.join(__dirname, '..'), welcomeImageUrl);
+          const resolvedPath = path.isAbsolute(normalizedUrl)
+            ? path.normalize(normalizedUrl)
+            : path.resolve(path.join(__dirname, '..'), normalizedUrl);
+
           if (fs.existsSync(resolvedPath)) {
             const imageName = path.basename(resolvedPath);
             messagePayload.files = [{ attachment: resolvedPath, name: imageName }];
             embed.setImage(`attachment://${imageName}`);
           } else {
-            console.warn('WELCOME_IMAGE_URL file not found:', resolvedPath);
+            console.warn('WELCOME_IMAGE_URL file not found:', resolvedPath, 'original:', welcomeImageUrl);
           }
         }
       }

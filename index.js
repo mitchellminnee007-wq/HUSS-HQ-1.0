@@ -182,6 +182,23 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    if (handlerName === 'rr_toggle') {
+      const command = client.commands.get('reactionrole');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling reaction role button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error toggling that role!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error toggling that role!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
     return;
   }
 
@@ -282,6 +299,22 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.followUp({ content: 'There was an error processing that submission!', ephemeral: true });
           } else {
             await interaction.reply({ content: 'There was an error processing that submission!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix === 'rr_setup_modal') {
+      const command = client.commands.get('reactionrole');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling reaction role modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error setting up reaction roles!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error setting up reaction roles!', ephemeral: true });
           }
         }
       }

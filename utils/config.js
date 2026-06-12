@@ -4,7 +4,13 @@ const path = require('node:path');
 const STORE_PATH = path.join(__dirname, '..', 'data', 'config.json');
 
 function cleanEnvValue(value) {
-  return value?.split('//')[0].trim() || null;
+  if (!value) return null;
+  let cleaned = value.trim();
+  cleaned = cleaned.replace(/(?:\s*#.*$)|(?:\s*\/\/.*$)/, '').trim();
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned || null;
 }
 
 function readStore() {
