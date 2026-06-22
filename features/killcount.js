@@ -19,6 +19,51 @@ const OFFICER_RANKS            = ['Officer', 'Commander'];
 const KILL_RANKS               = ['Officer', 'Commander', 'Member'];
 const MEDALS                   = ['🥇', '🥈', '🥉'];
 
+// ── Vehicle name normalisation ────────────────────────────────────────────────
+// Keys are lowercased/punctuation-stripped variants; values are canonical names.
+const VEHICLE_ALIASES = {
+  'bonecar':              'Bonecar',
+  'outlaw':               'Outlaw',
+  '68mm pushgun':         '68mm Pushgun',
+  '68mm push gun':        '68mm Pushgun',
+  'devitt':               'Devitt',
+  'eat':                  'EAT',
+  'brigand':              'Brigand',
+  'widow':                'Widow',
+  'at ht':                'AT HT',
+  'aa lt':                'AA LT',
+  '40mm pushgun':         '40mm Pushgun',
+  '40mm push gun':        '40mm Pushgun',
+  'silverhand':           'Silverhand',
+  '150 artillery gun':    '150 Artillery Gun',
+  '150mm artillery gun':  '150 Artillery Gun',
+  'htd':                  'HTD',
+  'lordscar':             'Lordscar',
+  'heavy truck':          'Heavy Truck',
+  'acv':                  'ACV',
+  'halftrack':            'Halftrack',
+  'medium ship':          'Medium Ship',
+  'mg car':               'MG Car',
+  'scout plane':          'Scout Plane',
+  'aa mobile tank':       'AA Mobile Tank',
+  'hatchet':              'Hatchet',
+  'scout lt':             'Scout LT',
+  'emplaced at':          'Emplaced AT',
+  'aa gun':               'AA Gun',
+  '120mm':                '120mm',
+  'sht':                  'SHT',
+};
+
+/**
+ * Normalise a raw vehicle name entered by a user.
+ * Strips trailing punctuation (e.g. "halftrack?") and resolves aliases so that
+ * "halftrack", "Halftrack", and "halftrack?" all become "Halftrack".
+ */
+function normalizeName(raw) {
+  const stripped = raw.trim().replace(/[?!.,;:]+$/, '');
+  return VEHICLE_ALIASES[stripped.toLowerCase()] ?? stripped;
+}
+
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
@@ -33,7 +78,12 @@ function writeStore(data) {
 }
 
 function getActive(guildId) {
-  return readStore().guilds[guildId]?.active ?? null;
+  const war = readStore().guilds[guildId]?.active ?? null;
+  if (war) {
+    // Normalise any previously stored kill names (fixes old casing, trailing punctuation, etc.)
+    war.kills = war.kills.map(e => ({ ...e, name: normalizeName(e.name) }));
+  }
+  return war;
 }
 
 function saveActive(guildId, data) {
@@ -242,7 +292,7 @@ module.exports = {
         return interaction.reply({ content: 'No active war. An officer needs to run `/killcount start` first.', ephemeral: true });
       }
 
-      const name   = interaction.options.getString('name', true).trim();
+      const name   = normalizeName(interaction.options.getString('name', true));
       const amount = interaction.options.getInteger('amount', true);
 
       // Each submission is stored individually for attribution
@@ -276,7 +326,7 @@ module.exports = {
       const war = getActive(guildId);
       if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
 
-      const name   = interaction.options.getString('name', true).trim();
+      const name   = normalizeName(interaction.options.getString('name', true));
       const before = war.kills.length;
       war.kills    = war.kills.filter(e => e.name.toLowerCase() !== name.toLowerCase());
 
@@ -391,7 +441,7 @@ module.exports = {
       const war = getActive(interaction.guildId);
       if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
 
-      const name   = interaction.fields.getTextInputValue('name').trim();
+      const name   = normalizeName(interaction.fields.getTextInputValue('name'));
       const amountStr = interaction.fields.getTextInputValue('amount').trim();
       const amount = parseInt(amountStr, 10);
 
