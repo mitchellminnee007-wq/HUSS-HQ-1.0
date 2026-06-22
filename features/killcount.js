@@ -64,6 +64,55 @@ function normalizeName(raw) {
   return VEHICLE_ALIASES[stripped.toLowerCase()] ?? stripped;
 }
 
+// Unique canonical vehicle names derived from the alias map.
+const CANONICAL_NAMES = [...new Set(Object.values(VEHICLE_ALIASES))];
+
+/** Levenshtein distance between two strings (case-insensitive). */
+function levenshtein(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase();
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+/**
+ * Resolve a raw user input to a canonical vehicle name with fuzzy matching.
+ * Returns { name, autoFixed, originalRaw, suggestion }
+ *   - autoFixed:  true  → typo was silently corrected (distance ≤ 2)
+ *   - suggestion: string → close match found but not auto-corrected (distance 3–4)
+ *   - otherwise the name is returned as-is (unknown vehicle, stored verbatim)
+ */
+function resolveVehicleInput(raw) {
+  const stripped = raw.trim().replace(/[?!.,;:]+$/, '');
+  // Exact alias match (handles casing & trailing punctuation)
+  const exact = VEHICLE_ALIASES[stripped.toLowerCase()];
+  if (exact) return { name: exact, autoFixed: exact !== stripped, originalRaw: stripped, suggestion: null };
+
+  // Fuzzy match against all canonical names
+  let best = null, bestDist = Infinity;
+  for (const canonical of CANONICAL_NAMES) {
+    const d = levenshtein(stripped, canonical);
+    if (d < bestDist) { bestDist = d; best = canonical; }
+  }
+
+  if (bestDist <= 2) {
+    // Very close — auto-correct silently (with a note in the reply)
+    return { name: best, autoFixed: true, originalRaw: stripped, suggestion: null };
+  }
+  if (bestDist <= 4) {
+    // Somewhat close — reject and suggest
+    return { name: stripped, autoFixed: false, originalRaw: stripped, suggestion: best };
+  }
+  // No close match — store verbatim
+  return { name: stripped, autoFixed: false, originalRaw: stripped, suggestion: null };
+}
+
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
@@ -292,8 +341,17 @@ module.exports = {
         return interaction.reply({ content: 'No active war. An officer needs to run `/killcount start` first.', ephemeral: true });
       }
 
-      const name   = normalizeName(interaction.options.getString('name', true));
-      const amount = interaction.options.getInteger('amount', true);
+      const resolved = resolveVehicleInput(interaction.options.getString('name', true));
+      const amount   = interaction.options.getInteger('amount', true);
+
+      if (resolved.suggestion) {
+        return interaction.reply({
+          content: `❌ Unknown vehicle **${resolved.originalRaw}**. Did you mean **${resolved.suggestion}**?`,
+          ephemeral: true,
+        });
+      }
+
+      const name = resolved.name;
 
       // Each submission is stored individually for attribution
       war.kills.push({
@@ -311,8 +369,9 @@ module.exports = {
         .filter(e => e.name.toLowerCase() === name.toLowerCase())
         .reduce((s, e) => s + e.count, 0);
 
+      const note = resolved.autoFixed ? ` *(auto-corrected from '${resolved.originalRaw}')*` : '';
       return interaction.reply({
-        content: `✅ Added **${amount}** kill${amount !== 1 ? 's' : ''} to **${name}** (total: ${total}).`,
+        content: `✅ Added **${amount}** kill${amount !== 1 ? 's' : ''} to **${name}** (total: ${total}).${note}`,
         ephemeral: true,
       });
     }
@@ -441,13 +500,22 @@ module.exports = {
       const war = getActive(interaction.guildId);
       if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
 
-      const name   = normalizeName(interaction.fields.getTextInputValue('name'));
+      const resolved   = resolveVehicleInput(interaction.fields.getTextInputValue('name'));
       const amountStr = interaction.fields.getTextInputValue('amount').trim();
       const amount = parseInt(amountStr, 10);
 
       if (isNaN(amount) || amount < 1) {
         return interaction.reply({ content: '❌ Please enter a valid number of kills (minimum 1).', ephemeral: true });
       }
+
+      if (resolved.suggestion) {
+        return interaction.reply({
+          content: `❌ Unknown vehicle **${resolved.originalRaw}**. Did you mean **${resolved.suggestion}**?`,
+          ephemeral: true,
+        });
+      }
+
+      const name = resolved.name;
 
       war.kills.push({
         name,
@@ -464,8 +532,9 @@ module.exports = {
         .filter(e => e.name.toLowerCase() === name.toLowerCase())
         .reduce((s, e) => s + e.count, 0);
 
+      const note = resolved.autoFixed ? ` *(auto-corrected from '${resolved.originalRaw}')*` : '';
       return interaction.reply({
-        content: `✅ Added **${amount}** kill${amount !== 1 ? 's' : ''} to **${name}** (total: ${total}).`,
+        content: `✅ Added **${amount}** kill${amount !== 1 ? 's' : ''} to **${name}** (total: ${total}).${note}`,
         ephemeral: true,
       });
     }
