@@ -130,17 +130,17 @@ function buildActionRow(channelId) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`ticket_priority:${channelId}`)
-      .setLabel('Change Priority')
+      .setLabel('Set Priority')
       .setEmoji('🎯')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId(`ticket_claim:${channelId}`)
-      .setLabel('Claim')
+      .setLabel('Claim Ticket')
       .setEmoji('👤')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`ticket_close:${channelId}`)
-      .setLabel('Close')
+      .setLabel('Close Ticket')
       .setEmoji('🔒')
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
@@ -271,8 +271,19 @@ async function openTicket(interaction, type) {
 
   // Send the ticket info + action buttons inside the ticket channel
   const messagePayload = {
-    content: `<@${user.id}> Your ticket has been created. A recruitment officer will be with you shortly.\nVotre ticket a été créé. Un officier de recrutement s'occupera de vous bientôt.`,
-    embeds:     [buildTicketEmbed(ticket)],
+    content: `<@${user.id}>`,
+    embeds: [
+      new EmbedBuilder()
+        .setColor(PRIORITIES[priority].color)
+        .setTitle(`🎟️  Ticket Opened`)
+        .setDescription(
+          `> Welcome, <@${user.id}>! An officer will be with you shortly.\n` +
+          `> *Bienvenue ! Un officier vous rejoindra très bientot.*`
+        )
+        .setFooter({ text: '⚔️ HUSS Ticket System' })
+        .setTimestamp(),
+      buildTicketEmbed(ticket),
+    ],
     components: [buildActionRow(channel.id)],
   };
 
@@ -290,20 +301,32 @@ async function openTicket(interaction, type) {
     await channel.send({
       embeds: [
         new EmbedBuilder()
-          .setColor(0x5865F2)
-          .setTitle('Verification Instructions')
-          .setDescription('To verify as a member, please:\n1. Take a screenshot of your F1 stats (shown above)\n2. Post it in this ticket\n3. Wait for an officer to review and approve\n\nPour vérifier en tant que membre, veuillez:\n1. Faire une capture d\'écran de vos statistiques F1 (affichées ci-dessus)\n2. La publier dans ce ticket\n3. Attendre qu\'un officier examine et approuve')
-          .setFooter({ text: 'Thank you for joining us!' })
+          .setColor(0x2ECC71)
+          .setTitle('✅  Verification Instructions')
+          .setDescription(
+            '**EN:** Post a screenshot of your **F1 in-game stats** (shown above) in this ticket and an officer will verify you.\n\n' +
+            '**FR:** Publiez une capture d\'écran de vos **statistiques F1 en jeu** (affichées ci-dessus) dans ce ticket et un officier vous vérifiera.'
+          )
+          .setFooter({ text: '⚔️ HUSS Ticket System  •  Thank you for joining us!' })
       ]
     });
   } else if (type === 'ally') {
     await channel.send({
       embeds: [
         new EmbedBuilder()
-          .setColor(0x5865F2)
-          .setTitle('Ally Request Instructions')
-          .setDescription('To request an alliance:\n1. Provide your clan/group name\n2. Tell us about your group\n3. Post the F1 screenshot (shown above)\n4. Wait for officer review\n\nPour demander une alliance:\n1. Fournissez le nom de votre clan/groupe\n2. Parlez-nous de votre groupe\n3. Postez la capture d\'écran F1 (affichée ci-dessus)\n4. Attendez l\'examen des officiers')
-          .setFooter({ text: 'We look forward to collaborating!' })
+          .setColor(0x3498DB)
+          .setTitle('🤝  Ally Request Instructions')
+          .setDescription(
+            '**EN:** Please provide:\n' +
+            '\u25b8 Your clan/group name\n' +
+            '\u25b8 A short description of your group\n' +
+            '\u25b8 The F1 screenshot shown above\n\n' +
+            '**FR:** Veuillez fournir\u00a0:\n' +
+            '\u25b8 Le nom de votre clan/groupe\n' +
+            '\u25b8 Une courte description de votre groupe\n' +
+            '\u25b8 La capture d\'écran F1 affichée ci-dessus'
+          )
+          .setFooter({ text: '⚔️ HUSS Ticket System  •  We look forward to collaborating!' })
       ]
     });
   }
@@ -317,13 +340,14 @@ async function openTicket(interaction, type) {
       const type_   = TICKET_TYPES[ticket.type];
       const notifyEmbed = new EmbedBuilder()
         .setColor(PRIORITIES[ticket.priority].color)
-        .setTitle(`${type_.emoji} New Ticket — ${type_.label}`)
+        .setTitle(`${type_.emoji}  New Ticket — ${type_.label}`)
+        .setDescription(`> Opened by <@${user.id}> — awaiting an officer to claim.`)
         .addFields(
-          { name: 'Opened by', value: `<@${user.id}>`,         inline: true },
-          { name: 'Priority',  value: PRIORITIES.low.label,    inline: true },
-          { name: 'Channel',   value: `${channel}`,            inline: true },
+          { name: '👤  User',      value: `<@${user.id}>`,       inline: true },
+          { name: '🎯  Priority',  value: PRIORITIES.low.label,  inline: true },
+          { name: '📌  Channel',   value: `${channel}`,          inline: true },
         )
-        .setFooter({ text: 'Powered by Hypha' })
+        .setFooter({ text: '⚔️ HUSS Ticket System' })
         .setTimestamp();
 
       const jumpRow = new ActionRowBuilder().addComponents(
@@ -360,17 +384,17 @@ async function closeTicket(interaction, channelId, reason) {
       const type = TICKET_TYPES[ticket.type]   ?? { label: 'Unknown', emoji: '🎫' };
       const logEmbed = new EmbedBuilder()
         .setColor(0x95A5A6)
-        .setTitle('🔒 Ticket Closed')
+        .setTitle('🔒  Ticket Closed')
+        .setDescription(`> **${type.emoji} ${type.label}** ticket from <@${ticket.userId}>`)
         .addFields(
-          { name: 'Channel',    value: channel?.name ?? channelId,                                    inline: true },
-          { name: 'Type',       value: `${type.emoji} ${type.label}`,                                 inline: true },
-          { name: 'Opened by',  value: `<@${ticket.userId}>`,                                         inline: true },
-          { name: 'Priority',   value: prio.label,                                                    inline: true },
-          { name: 'Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : 'Unclaimed',     inline: true },
-          { name: 'Closed by',  value: `<@${interaction.user.id}>`,                                   inline: true },
-          { name: 'Reason',     value: reason ?? 'No reason provided' },
+          { name: '📁  Channel',    value: channel?.name ?? channelId,                                     inline: true },
+          { name: '👤  Opened by',  value: `<@${ticket.userId}>`,                                           inline: true },
+          { name: '🎯  Priority',   value: prio.label,                                                     inline: true },
+          { name: '🔖  Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '*Unclaimed*',   inline: true },
+          { name: '🔒  Closed by',  value: `<@${interaction.user.id}>`,                                    inline: true },
+          { name: '📝  Reason',     value: reason ?? '*No reason provided*',                               inline: true },
         )
-        .setFooter({ text: 'Powered by Hypha' })
+        .setFooter({ text: '⚔️ HUSS Ticket System' })
         .setTimestamp();
 
       const transcriptFilename = `ticket-${interaction.guildId}-${channelId}-${Date.now()}.html`;
@@ -492,7 +516,13 @@ async function closeTicket(interaction, channelId, reason) {
         embeds: [
           new EmbedBuilder()
             .setColor(0x95A5A6)
-            .setDescription(`🔒 Ticket closed by <@${interaction.user.id}>\n**Reason:** ${reason}`),
+            .setTitle('🔒  Ticket Closed')
+            .setDescription(
+              `> Closed by <@${interaction.user.id}>\n` +
+              `> **Reason:** ${reason}`
+            )
+            .setFooter({ text: '⚔️ HUSS Ticket System' })
+            .setTimestamp(),
         ],
       }).catch(() => {});
       await new Promise(r => setTimeout(r, 3000));
@@ -512,15 +542,19 @@ module.exports = {
 
   async execute(interaction) {
     const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setTitle('🎫 Support Tickets')
-      .setDescription('Choose a category below to open a ticket.\nOur recruitment officers will assist you as soon as possible.\nChoisissez une catégorie ci-dessous pour ouvrir un ticket. Nos officiers de recrutement vous aideront dès que possible.')
-      .addFields(
-        { name: '✅ Verification',     value: 'Get verified as a member of the guild. / Obtenez votre vérification en tant que membre du clan.' },
-        { name: '🤝 Ally Request',     value: 'Request an alliance with our group. / Demandez une alliance avec notre groupe.' },
-        { name: '🎖️ Officer Question', value: 'Ask the officer team a private question. / Posez une question privée aux officiers.' },
+      .setColor(0xE74C3C)
+      .setTitle('🎟️  Support & Verification')
+      .setDescription(
+        '> Select a category below to open a **private ticket** with our officers.\n' +
+        '> *Sélectionnez une catégorie ci-dessous pour ouvrir un **ticket privé** avec nos officiers.*'
       )
-      .setFooter({ text: 'Powered by Hypha' });
+      .addFields(
+        { name: '✅  Verification',     value: 'Become a verified HUSS member.\n*Devenez un membre vérifié de HUSS.*' },
+        { name: '🤝  Ally Request',     value: 'Request a formal alliance with us.\n*Demandez une alliance formelle avec nous.*' },
+        { name: '🎖️  Officer Question', value: 'Ask the officer team something privately.\n*Posez une question privée aux officiers.*' },
+      )
+      .setFooter({ text: '⚔️ HUSS Command' })
+      .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('ticket_open:verify' ).setLabel('Verification'    ).setEmoji('✅' ).setStyle(ButtonStyle.Success  ),
@@ -646,13 +680,14 @@ module.exports = {
             const type_ = TICKET_TYPES[ticket.type];
             const updatedEmbed = new EmbedBuilder()
               .setColor(PRIORITIES[newPriority].color)
-              .setTitle(`${type_.emoji} New Ticket — ${type_.label}`)
+              .setTitle(`${type_.emoji}  Ticket — ${type_.label}`)
+              .setDescription(`> Priority updated by <@${interaction.user.id}>`)
               .addFields(
-                { name: 'Opened by', value: `<@${ticket.userId}>`,           inline: true },
-                { name: 'Priority',  value: PRIORITIES[newPriority].label,   inline: true },
-                { name: 'Channel',   value: `<#${channelId}>`,               inline: true },
+                { name: '👤  User',     value: `<@${ticket.userId}>`,           inline: true },
+                { name: '🎯  Priority', value: PRIORITIES[newPriority].label,   inline: true },
+                { name: '📌  Channel',  value: `<#${channelId}>`,               inline: true },
               )
-              .setFooter({ text: `Priority updated by ${interaction.user.tag} • Powered by Hypha` })
+              .setFooter({ text: `⚔️ HUSS Ticket System` })
               .setTimestamp();
             await officerMsg.edit({ embeds: [updatedEmbed], components: officerMsg.components }).catch(() => {});
           }
