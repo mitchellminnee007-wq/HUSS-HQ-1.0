@@ -276,7 +276,6 @@ module.exports = {
     if (interaction.channelId !== panelChannelId) {
       return interaction.reply({ content: `❌ This command can only be used in <#${panelChannelId}>.`, ephemeral: true });
     }
-
     const channel = interaction.guild.channels.cache.get(panelChannelId)
       ?? await interaction.guild.channels.fetch(panelChannelId).catch(() => null);
 
@@ -285,7 +284,7 @@ module.exports = {
     }
 
     await channel.send({ embeds: [buildPanelEmbed()], components: buildPanelRows() });
-    return interaction.reply({ content: `✅ Officer control panel posted.`, ephemeral: true });
+    return interaction.reply({ content: `✅ Officer control panel posted in ${channel}.`, ephemeral: true });
   },
 
   // ── Button handler ──────────────────────────────────────────────────────────
