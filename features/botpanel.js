@@ -271,20 +271,12 @@ module.exports = {
       return interaction.reply({ content: 'Only Officers and Commanders can post the bot panel.', ephemeral: true });
     }
 
-    const panelChannelId = getConfig(interaction.guildId, 'OFFICER_CHANNEL_ID') ?? DEFAULT_PANEL_CHANNEL_ID;
-
-    if (interaction.channelId !== panelChannelId) {
-      return interaction.reply({ content: `❌ This command can only be used in <#${panelChannelId}>.`, ephemeral: true });
-    }
-    const channel = interaction.guild.channels.cache.get(panelChannelId)
-      ?? await interaction.guild.channels.fetch(panelChannelId).catch(() => null);
-
-    if (!channel) {
-      return interaction.reply({ content: '❌ Officer panel channel not found. Set it with `/config set-channel`.', ephemeral: true });
+    if (interaction.channelId !== DEFAULT_PANEL_CHANNEL_ID) {
+      return interaction.reply({ content: `❌ This command can only be used in <#${DEFAULT_PANEL_CHANNEL_ID}>.`, ephemeral: true });
     }
 
-    await channel.send({ embeds: [buildPanelEmbed()], components: buildPanelRows() });
-    return interaction.reply({ content: `✅ Officer control panel posted in ${channel}.`, ephemeral: true });
+    await interaction.channel.send({ embeds: [buildPanelEmbed()], components: buildPanelRows() });
+    return interaction.reply({ content: '✅ Officer control panel posted.', ephemeral: true });
   },
 
   // ── Button handler ──────────────────────────────────────────────────────────
