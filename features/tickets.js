@@ -6,8 +6,6 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -18,12 +16,7 @@ const { getConfig } = require('../utils/config');
 
 const STORE_PATH   = path.join(__dirname, '..', 'data', 'tickets.json');
 const OFFICER_RANKS = ['Officer', 'Commander'];
-
-const PRIORITIES = {
-  low:    { label: '🟢 Low',    color: 0x2ECC71 },
-  medium: { label: '🟡 Medium', color: 0xF39C12 },
-  high:   { label: '🔴 High',   color: 0xE74C3C },
-};
+const TICKET_COLOR  = 0x5865F2;
 
 const TICKET_TYPES = {
   verify:  { label: 'Verification',     emoji: '✅' },
@@ -105,17 +98,19 @@ function sanitizeName(str) {
 
 // ── Ticket embed ──────────────────────────────────────────────────────────────
 function buildTicketEmbed(ticket) {
-  const prio = PRIORITIES[ticket.priority];
   const type = TICKET_TYPES[ticket.type];
+  const statusLine = ticket.claimedBy
+    ? `> 👤  Claimed by <@${ticket.claimedBy}>`
+    : '> ⏳  Awaiting an officer to claim this ticket.';
   const embed = new EmbedBuilder()
-    .setColor(prio.color)
-    .setTitle(`${type.emoji} ${type.label} Ticket`)
+    .setColor(TICKET_COLOR)
+    .setTitle(`${type.emoji}  ${type.label}`)
+    .setDescription(statusLine)
     .addFields(
-      { name: 'Opened by',  value: `<@${ticket.userId}>`,                                      inline: true },
-      { name: 'Priority',   value: prio.label,                                                  inline: true },
-      { name: 'Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '*Unclaimed*', inline: true },
+      { name: '👤  Opened by',  value: `<@${ticket.userId}>`,                                       inline: true },
+      { name: '🔖  Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '*Unclaimed*', inline: true },
     )
-    .setFooter({ text: 'Powered by Hypha' })
+    .setFooter({ text: '⚔️ HUSS Ticket System' })
     .setTimestamp(ticket.createdAt);
 
   if ((ticket.type === 'verify' || ticket.type === 'ally') && fs.existsSync(path.join(__dirname, '..', 'Supporting things', 'F1Screenshot.png'))) {
@@ -128,11 +123,6 @@ function buildTicketEmbed(ticket) {
 // ── Action buttons (inside ticket) ───────────────────────────────────────────
 function buildActionRow(channelId) {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`ticket_priority:${channelId}`)
-      .setLabel('Set Priority')
-      .setEmoji('🎯')
-      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId(`ticket_claim:${channelId}`)
       .setLabel('Claim Ticket')
@@ -174,9 +164,8 @@ async function openTicket(interaction, type) {
     }
   }
 
-  const priority    = 'low';
   const safeName    = sanitizeName(user.username);
-  const channelName = `ticket-${safeName}-${priority}`;
+  const channelName = `ticket-${safeName}`;
 
   // Resolve category — validate it's actually a category channel
   const DEFAULT_CATEGORY_ID = '1394640780685217896';
@@ -252,7 +241,7 @@ async function openTicket(interaction, type) {
   const channelOptions = {
     name: channelName,
     type: ChannelType.GuildText,
-    topic: `${TICKET_TYPES[type].label} | ${user.tag} | Priority: Low`,
+    topic: `${TICKET_TYPES[type].label} | ${user.tag}`,
     permissionOverwrites: overwrites,
   };
   if (categoryId) channelOptions.parent = categoryId;
@@ -263,7 +252,6 @@ async function openTicket(interaction, type) {
     userId:    user.id,
     username:  user.username,
     type,
-    priority,
     claimedBy: null,
     createdAt: Date.now(),
   };
@@ -274,7 +262,7 @@ async function openTicket(interaction, type) {
     content: `<@${user.id}>`,
     embeds: [
       new EmbedBuilder()
-        .setColor(PRIORITIES[priority].color)
+        .setColor(TICKET_COLOR)
         .setTitle(`🎟️  Ticket Opened`)
         .setDescription(
           `> Welcome, <@${user.id}>! An officer will be with you shortly.\n` +
@@ -339,13 +327,12 @@ async function openTicket(interaction, type) {
     if (officerChannel) {
       const type_   = TICKET_TYPES[ticket.type];
       const notifyEmbed = new EmbedBuilder()
-        .setColor(PRIORITIES[ticket.priority].color)
+        .setColor(TICKET_COLOR)
         .setTitle(`${type_.emoji}  New Ticket — ${type_.label}`)
         .setDescription(`> Opened by <@${user.id}> — awaiting an officer to claim.`)
         .addFields(
-          { name: '👤  User',      value: `<@${user.id}>`,       inline: true },
-          { name: '🎯  Priority',  value: PRIORITIES.low.label,  inline: true },
-          { name: '📌  Channel',   value: `${channel}`,          inline: true },
+          { name: '👤  User',    value: `<@${user.id}>`,  inline: true },
+          { name: '📌  Channel', value: `${channel}`,    inline: true },
         )
         .setFooter({ text: '⚔️ HUSS Ticket System' })
         .setTimestamp();
@@ -380,7 +367,6 @@ async function closeTicket(interaction, channelId, reason) {
   if (logChannelId) {
     const logChannel = interaction.guild.channels.cache.get(logChannelId);
     if (logChannel && ticket) {
-      const prio = PRIORITIES[ticket.priority] ?? PRIORITIES.low;
       const type = TICKET_TYPES[ticket.type]   ?? { label: 'Unknown', emoji: '🎫' };
       const logEmbed = new EmbedBuilder()
         .setColor(0x95A5A6)
@@ -389,7 +375,6 @@ async function closeTicket(interaction, channelId, reason) {
         .addFields(
           { name: '📁  Channel',    value: channel?.name ?? channelId,                                     inline: true },
           { name: '👤  Opened by',  value: `<@${ticket.userId}>`,                                           inline: true },
-          { name: '🎯  Priority',   value: prio.label,                                                     inline: true },
           { name: '🔖  Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '*Unclaimed*',   inline: true },
           { name: '🔒  Closed by',  value: `<@${interaction.user.id}>`,                                    inline: true },
           { name: '📝  Reason',     value: reason ?? '*No reason provided*',                               inline: true },
@@ -444,10 +429,6 @@ async function closeTicket(interaction, channelId, reason) {
           <div class="info-item">
             <span class="info-label">Type</span>
             <span class="info-value">${type.emoji} ${type.label}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Priority</span>
-            <span class="info-value">${prio.label}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Closed by</span>
@@ -608,22 +589,6 @@ module.exports = {
       return interaction.reply({ content: `✅ You have claimed this ticket.`, ephemeral: true });
     }
 
-    // Change Priority — send ephemeral select menu
-    if (action === 'ticket_priority') {
-      if (!isRecruitmentOfficer(interaction.member)) {
-        return interaction.reply({ content: 'Only recruitment officers can change ticket priority.', ephemeral: true });
-      }
-      const select = new StringSelectMenuBuilder()
-        .setCustomId(`ticket_priority_select:${channelId}`)
-        .setPlaceholder('Select a new priority')
-        .addOptions(
-          new StringSelectMenuOptionBuilder().setLabel('🟢 Low'   ).setValue('low'   ).setDefault(ticket.priority === 'low'   ),
-          new StringSelectMenuOptionBuilder().setLabel('🟡 Medium').setValue('medium').setDefault(ticket.priority === 'medium'),
-          new StringSelectMenuOptionBuilder().setLabel('🔴 High'  ).setValue('high'  ).setDefault(ticket.priority === 'high'  ),
-        );
-      return interaction.reply({ content: 'Select the new priority:', components: [new ActionRowBuilder().addComponents(select)], ephemeral: true });
-    }
-
     // Close
     if (action === 'ticket_close') {
       await interaction.reply({ content: '🔒 Closing ticket...', ephemeral: true });
@@ -650,54 +615,9 @@ module.exports = {
   },
 
   // ── Select menu interactions ────────────────────────────────────────────────
-  async handleSelect(interaction) {
-    const [action, channelId] = interaction.customId.split(':');
-
-    if (action === 'ticket_priority_select') {
-      const newPriority = interaction.values[0];
-      const ticket      = getTicket(interaction.guildId, channelId);
-      if (!ticket) return interaction.update({ content: 'Ticket not found.', components: [] });
-
-      ticket.priority = newPriority;
-      saveTicket(interaction.guildId, channelId, ticket);
-
-      const ch = interaction.guild.channels.cache.get(channelId);
-      if (ch) {
-        const safeName = sanitizeName(ticket.username);
-        await ch.setName(`ticket-${safeName}-${newPriority}`).catch(() => {});
-        const msgs   = await ch.messages.fetch({ limit: 15 });
-        const botMsg = msgs.find(m => m.author.id === interaction.client.user.id && m.embeds.length && m.components.length);
-        if (botMsg) await botMsg.edit({ embeds: [buildTicketEmbed(ticket)], components: [buildActionRow(channelId)] }).catch(() => {});
-      }
-
-      // Update the officer channel notification embed
-      if (ticket.officerChannelId && ticket.officerMsgId) {
-        const officerCh = interaction.guild.channels.cache.get(ticket.officerChannelId)
-          ?? await interaction.guild.channels.fetch(ticket.officerChannelId).catch(() => null);
-        if (officerCh) {
-          const officerMsg = await officerCh.messages.fetch(ticket.officerMsgId).catch(() => null);
-          if (officerMsg) {
-            const type_ = TICKET_TYPES[ticket.type];
-            const updatedEmbed = new EmbedBuilder()
-              .setColor(PRIORITIES[newPriority].color)
-              .setTitle(`${type_.emoji}  Ticket — ${type_.label}`)
-              .setDescription(`> Priority updated by <@${interaction.user.id}>`)
-              .addFields(
-                { name: '👤  User',     value: `<@${ticket.userId}>`,           inline: true },
-                { name: '🎯  Priority', value: PRIORITIES[newPriority].label,   inline: true },
-                { name: '📌  Channel',  value: `<#${channelId}>`,               inline: true },
-              )
-              .setFooter({ text: `⚔️ HUSS Ticket System` })
-              .setTimestamp();
-            await officerMsg.edit({ embeds: [updatedEmbed], components: officerMsg.components }).catch(() => {});
-          }
-        }
-      }
-
-      return interaction.update({ content: `✅ Priority updated to **${PRIORITIES[newPriority].label}**.`, components: [] });
-    }
+  async handleSelect(_interaction) {
+    // No select menus remain after priority removal
   },
-
   // ── Modal submit interactions ───────────────────────────────────────────────
   async handleModal(interaction) {
     const [action, channelId] = interaction.customId.split(':');
