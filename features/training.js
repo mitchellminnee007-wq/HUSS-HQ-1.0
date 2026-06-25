@@ -80,9 +80,12 @@ async function sendTrainingReminder(client, guildId, msgId, tr) {
     embeds: [
       new EmbedBuilder()
         .setColor(0xF39C12)
-        .setTitle(`Training starts soon: ${tr.title}`)
-        .setDescription(`Starts <t:${timestamp}:R> at <t:${timestamp}:t>.`)
-        .setFooter({ text: '15-minute reminder • Powered by Hypha' })
+        .setTitle(`⏰  Training starting soon!`)
+        .setDescription(
+          `> **${tr.title}** begins <t:${timestamp}:R> — <t:${timestamp}:t>\n` +
+          `> Make sure you're ready and in position.`
+        )
+        .setFooter({ text: '⚔️ HUSS Command  •  15-minute reminder' })
     ],
     allowedMentions: { users: acceptedIds }
   }).catch(() => {});
@@ -255,32 +258,78 @@ function parseDateTime(input) {
 // ── Build the training overview embed ─────────────────────────────────────────
 function buildTrainingEmbed(tr) {
   const timestamp = Math.floor(tr.time / 1000);
-  const fmt = (list) => list.length ? list.map(e => e.name).join('\n') : '*None yet*';
+  const fmt = (list) =>
+    list.length ? list.map(e => `▸ ${e.name}`).join('\n') : '*None yet*';
+
+  const { accepted, declined, tentative } = tr.attendees;
+  const total = accepted.length + declined.length + tentative.length;
 
   return new EmbedBuilder()
     .setColor(0xF39C12)
-    .setTitle(`🎓 ${tr.title}`)
-    .setDescription(tr.description)
-    .addFields(
-      { name: '🕐 Time', value: `<t:${timestamp}:F>\n<t:${timestamp}:R>` },
-      { name: `✅ Attending (${tr.attendees.accepted.length})`,  value: fmt(tr.attendees.accepted),  inline: true },
-      { name: `❌ Declined (${tr.attendees.declined.length})`,   value: fmt(tr.attendees.declined),  inline: true },
-      { name: `❓ Tentative (${tr.attendees.tentative.length})`, value: fmt(tr.attendees.tentative), inline: true },
+    .setTitle(`🎓  ${tr.title}`)
+    .setDescription(
+      (tr.description ? `> ${tr.description}\n\n` : '') +
+      `📅  <t:${timestamp}:F>\n` +
+      `⏱️  <t:${timestamp}:R>`
     )
-    .setFooter({ text: `Created by ${tr.createdByName} • Powered by Hypha` })
+    .addFields(
+      {
+        name:  `✅  Attending — ${accepted.length}`,
+        value: fmt(accepted),
+        inline: true,
+      },
+      {
+        name:  `❌  Declined — ${declined.length}`,
+        value: fmt(declined),
+        inline: true,
+      },
+      {
+        name:  `❓  Maybe — ${tentative.length}`,
+        value: fmt(tentative),
+        inline: true,
+      },
+      {
+        name:  '📊  Response rate',
+        value: total > 0
+          ? `\`${accepted.length}/${total}\` confirmed  •  \`${tentative.length}\` maybe`
+          : '*No responses yet.*',
+        inline: false,
+      },
+    )
+    .setFooter({ text: `⚔️ HUSS Command  •  Organised by ${tr.createdByName}` })
     .setTimestamp(tr.createdAt);
 }
 
 // ── Build RSVP + management buttons ──────────────────────────────────────────
 function buildTrainingRows(msgId) {
   const rsvp = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`tr_accept:${msgId}`   ).setEmoji('✅').setStyle(ButtonStyle.Success  ),
-    new ButtonBuilder().setCustomId(`tr_decline:${msgId}`  ).setEmoji('❌').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`tr_tentative:${msgId}`).setEmoji('❓').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`tr_accept:${msgId}`)
+      .setLabel('Accept')
+      .setEmoji('✅')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`tr_decline:${msgId}`)
+      .setLabel('Decline')
+      .setEmoji('❌')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`tr_tentative:${msgId}`)
+      .setLabel('Maybe')
+      .setEmoji('❓')
+      .setStyle(ButtonStyle.Primary),
   );
   const mgmt = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`tr_edit:${msgId}`  ).setLabel('Edit'  ).setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`tr_delete:${msgId}`).setLabel('Delete').setStyle(ButtonStyle.Danger ),
+    new ButtonBuilder()
+      .setCustomId(`tr_edit:${msgId}`)
+      .setLabel('Edit')
+      .setEmoji('✏️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`tr_delete:${msgId}`)
+      .setLabel('Cancel Training')
+      .setEmoji('🗑️')
+      .setStyle(ButtonStyle.Danger),
   );
   return [rsvp, mgmt];
 }

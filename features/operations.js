@@ -80,9 +80,12 @@ async function sendOperationReminder(client, guildId, msgId, op) {
     embeds: [
       new EmbedBuilder()
         .setColor(0x5865F2)
-        .setTitle(`Operation starts soon: ${op.title}`)
-        .setDescription(`Starts <t:${timestamp}:R> at <t:${timestamp}:t>.`)
-        .setFooter({ text: '15-minute reminder • Powered by Hypha' })
+        .setTitle(`⚠️  Operation starting soon!`)
+        .setDescription(
+          `> **${op.title}** begins <t:${timestamp}:R> — <t:${timestamp}:t>\n` +
+          `> Gear up and stand by for deployment.`
+        )
+        .setFooter({ text: '⚔️ HUSS Command  •  15-minute reminder' })
     ],
     allowedMentions: { users: acceptedIds }
   }).catch(() => {});
@@ -290,13 +293,33 @@ function buildOpEmbed(op) {
 // ── Build RSVP + management buttons ──────────────────────────────────────────
 function buildOpRows(msgId) {
   const rsvp = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`op_accept:${msgId}`  ).setEmoji('✅').setStyle(ButtonStyle.Success  ),
-    new ButtonBuilder().setCustomId(`op_decline:${msgId}` ).setEmoji('❌').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`op_tentative:${msgId}`).setEmoji('❓').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`op_accept:${msgId}`)
+      .setLabel('Accept')
+      .setEmoji('✅')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`op_decline:${msgId}`)
+      .setLabel('Decline')
+      .setEmoji('❌')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`op_tentative:${msgId}`)
+      .setLabel('Maybe')
+      .setEmoji('❓')
+      .setStyle(ButtonStyle.Primary),
   );
   const mgmt = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`op_edit:${msgId}`  ).setLabel('Edit'  ).setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`op_delete:${msgId}`).setLabel('Delete').setStyle(ButtonStyle.Danger ),
+    new ButtonBuilder()
+      .setCustomId(`op_edit:${msgId}`)
+      .setLabel('Edit')
+      .setEmoji('✏️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`op_delete:${msgId}`)
+      .setLabel('Cancel Operation')
+      .setEmoji('🗑️')
+      .setStyle(ButtonStyle.Danger),
   );
   return [rsvp, mgmt];
 }
