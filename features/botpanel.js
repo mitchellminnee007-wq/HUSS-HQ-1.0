@@ -234,9 +234,9 @@ function buildPanelEmbed() {
     .setTitle('⚙️ Officer Control Panel')
     .setDescription('Quick access to all officer actions. All buttons are officer-only.')
     .addFields(
-      { name: '\u2694\ufe0f Operations & Wars', value: '\ud83d\udccb Create an operation event\n\ud83c\udf93 Create a training event\n\ud83c\udfaf Start a kill count tracker\n\u2694\ufe0f Post the activity check panel in any channel' },
+      { name: '\u2694\ufe0f Operations & Wars', value: '\ud83d\udccb Create an operation event\n\ud83c\udf93 Create a training event\n\ud83c\udfaf Start a kill count tracker\n\u2694\ufe0f Post the activity check panel — **auto-schedules the 4-day rollover**' },
       { name: '🎫 Tickets',           value: '🎫 Post the ticket panel in the verification channel' },
-      { name: '🔄 Rollover',          value: '⏳ Schedule the 4-day collie rollover\n✋ Cancel a pending rollover' },
+      { name: '🔄 Rollover',          value: '⏳ Manually schedule the 4-day rollover\n✋ Cancel a pending rollover' },
       { name: '⚙️ Config',            value: '⚙️ View current bot configuration for this server' },
     )
     .setFooter({ text: 'Powered by Hypha' });
@@ -272,6 +272,11 @@ module.exports = {
     }
 
     const panelChannelId = getConfig(interaction.guildId, 'OFFICER_CHANNEL_ID') ?? DEFAULT_PANEL_CHANNEL_ID;
+
+    if (interaction.channelId !== panelChannelId) {
+      return interaction.reply({ content: `❌ This command can only be used in <#${panelChannelId}>.`, ephemeral: true });
+    }
+
     const channel = interaction.guild.channels.cache.get(panelChannelId)
       ?? await interaction.guild.channels.fetch(panelChannelId).catch(() => null);
 
@@ -280,7 +285,7 @@ module.exports = {
     }
 
     await channel.send({ embeds: [buildPanelEmbed()], components: buildPanelRows() });
-    return interaction.reply({ content: `✅ Officer control panel posted in ${channel}.`, ephemeral: true });
+    return interaction.reply({ content: `✅ Officer control panel posted.`, ephemeral: true });
   },
 
   // ── Button handler ──────────────────────────────────────────────────────────
@@ -448,7 +453,7 @@ module.exports = {
       return interaction.editReply(`✅ Kill count panel for **${name}** posted in ${channel}.`);
     }
 
-    // ── War sign-up ─────────────────────────────────────────────────────────
+    // ── War sign-up (+ auto-schedule rollover) ─────────────────────────────
     if (interaction.customId === 'bp_activemember_modal') {
       if (!isOfficer(interaction.member)) {
         return interaction.reply({ content: 'Only Officers and Commanders can post an activity check.', ephemeral: true });
@@ -468,7 +473,22 @@ module.exports = {
       }
 
       await channel.send({ embeds: [buildSignupEmbed(interaction.guild)], components: [buildSignupRow()] });
-      return interaction.editReply(`Activity check posted in ${channel}.`);
+
+      // Automatically schedule the rollover whenever a war sign-up is posted
+      const rolloverStore = readRolloverStore();
+      const executeAt     = Date.now() + ROLLOVER_MS;
+      rolloverStore.guilds[interaction.guildId] = {
+        executeAt,
+        notifyChannelId: interaction.channelId,
+        startedBy:       interaction.user.id,
+      };
+      writeRolloverStore(rolloverStore);
+
+      const timestamp = Math.floor(executeAt / 1000);
+      return interaction.editReply(
+        `✅ Activity check posted in ${channel}.
+⏳ Rollover automatically scheduled — executes <t:${timestamp}:R> (<t:${timestamp}:F>).`
+      );
     }
   },
 };
