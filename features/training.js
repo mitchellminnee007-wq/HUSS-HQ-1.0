@@ -75,7 +75,7 @@ async function sendTrainingReminder(client, guildId, msgId, tr) {
     ? acceptedIds.map(id => `<@${id}>`).join(' ')
     : undefined;
 
-  await channel.send({
+  const reminderMsg = await channel.send({
     content,
     embeds: [
       new EmbedBuilder()
@@ -88,7 +88,13 @@ async function sendTrainingReminder(client, guildId, msgId, tr) {
         .setFooter({ text: '⚔️ HUSS Command  •  15-minute reminder' })
     ],
     allowedMentions: { users: acceptedIds }
-  }).catch(() => {});
+  }).catch(() => null);
+
+  // Store the reminder message ID so it can be cleaned up when the training is deleted
+  if (reminderMsg) {
+    tr.reminderMsgId = reminderMsg.id;
+    saveTraining(guildId, msgId, tr);
+  }
 }
 
 function scheduleTrainingReminder(client, guildId, msgId, tr) {
@@ -453,6 +459,11 @@ module.exports = {
             if (thread) await thread.delete().catch(() => {});
           }
           await msg.delete().catch(() => {});
+        }
+        // Delete the 15-minute reminder message if it was sent
+        if (tr.reminderMsgId) {
+          const reminderMsg = await channel.messages.fetch(tr.reminderMsgId).catch(() => null);
+          if (reminderMsg) await reminderMsg.delete().catch(() => {});
         }
       }
 

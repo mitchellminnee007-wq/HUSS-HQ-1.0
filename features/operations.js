@@ -75,7 +75,7 @@ async function sendOperationReminder(client, guildId, msgId, op) {
     ? acceptedIds.map(id => `<@${id}>`).join(' ')
     : undefined;
 
-  await channel.send({
+  const reminderMsg = await channel.send({
     content,
     embeds: [
       new EmbedBuilder()
@@ -88,7 +88,13 @@ async function sendOperationReminder(client, guildId, msgId, op) {
         .setFooter({ text: '⚔️ HUSS Command  •  15-minute reminder' })
     ],
     allowedMentions: { users: acceptedIds }
-  }).catch(() => {});
+  }).catch(() => null);
+
+  // Store the reminder message ID so it can be cleaned up when the op is deleted
+  if (reminderMsg) {
+    op.reminderMsgId = reminderMsg.id;
+    saveOp(guildId, msgId, op);
+  }
 }
 
 function scheduleOperationReminder(client, guildId, msgId, op) {
@@ -456,6 +462,11 @@ module.exports = {
             if (thread) await thread.delete().catch(() => {});
           }
           await msg.delete().catch(() => {});
+        }
+        // Delete the 15-minute reminder message if it was sent
+        if (op.reminderMsgId) {
+          const reminderMsg = await channel.messages.fetch(op.reminderMsgId).catch(() => null);
+          if (reminderMsg) await reminderMsg.delete().catch(() => {});
         }
       }
 
