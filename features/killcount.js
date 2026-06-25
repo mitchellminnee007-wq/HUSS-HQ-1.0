@@ -158,48 +158,89 @@ function canAddKills(member) {
   return member.roles.cache.some(r => KILL_RANKS.includes(r.name));
 }
 
+// ── UI helpers ───────────────────────────────────────────────────────────────
+/**
+ * Renders a compact ASCII progress bar.
+ * e.g. killBar(3, 5, 8) → '█████░░░'
+ */
+function killBar(count, max, width = 8) {
+  if (max <= 0) return '░'.repeat(width);
+  const filled = Math.round((count / max) * width);
+  return '█'.repeat(Math.max(0, filled)) + '░'.repeat(Math.max(0, width - filled));
+}
+
+/** Format milliseconds as '1h 23m' or '45m'. */
+function formatDuration(ms) {
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours   = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 // ── Build kill count embed ────────────────────────────────────────────────────
-function buildEmbed(war) {
-  // Merge kills by player name for the leaderboard
+/**
+ * @param {object}  war    Active-war data object.
+ * @param {boolean} ended  When true, renders the archived "Battle Report" variant.
+ */
+function buildEmbed(war, ended = false) {
+  // Merge kills per vehicle for the leaderboard
   const merged = {};
   for (const e of war.kills) {
     const key = e.name.toLowerCase();
     if (!merged[key]) merged[key] = { name: e.name, count: 0 };
     merged[key].count += e.count;
   }
-  const sorted = Object.values(merged).sort((a, b) => b.count - a.count);
-  const total  = war.kills.reduce((s, e) => s + e.count, 0);
+  const sorted     = Object.values(merged).sort((a, b) => b.count - a.count);
+  const total      = war.kills.reduce((s, e) => s + e.count, 0);
+  const maxKills   = sorted[0]?.count ?? 1;
+  const combatants = sorted.length;
 
-  let board = '';
+  // ── Leaderboard ─────────────────────────────────────────────────────────
+  let board;
   if (sorted.length === 0) {
     board = '*No kills recorded yet.*';
   } else {
-    board = sorted
-      .map((e, i) => `${MEDALS[i] ?? '▪️'} **${e.name}** — ${e.count} kill${e.count !== 1 ? 's' : ''}`)
-      .join('\n');
+    board = sorted.map((e, i) => {
+      const medal = MEDALS[i] ?? `\`${String(i + 1).padStart(2)}\``;
+      const bar   = killBar(e.count, maxKills);
+      return `${medal} **${e.name}**  \`${bar}\`  **${e.count}**`;
+    }).join('\n');
   }
 
-  // Individual submissions for reward attribution
-  let submissions = '';
+  // ── Recent submissions ───────────────────────────────────────────────────
+  let submissions;
   if (war.kills.length === 0) {
-    submissions = '*None yet.*';
+    submissions = '*No submissions yet.*';
   } else {
-    submissions = war.kills
-      .slice(-20) // show last 20 entries to avoid embed limits
-      .map(e => `\`+${e.count}\` **${e.name}** — by ${e.reportedByName}`)
+    const recent = war.kills.slice(-12);
+    submissions  = recent
+      .map(e => `\`+${e.count}\` **${e.name}** ↳ *${e.reportedByName}*`)
       .join('\n');
-    if (war.kills.length > 20) submissions = `*...${war.kills.length - 20} earlier entries hidden*\n` + submissions;
+    if (war.kills.length > 12)
+      submissions = `*...${war.kills.length - 12} earlier entries hidden*\n` + submissions;
   }
+
+  // ── Duration ─────────────────────────────────────────────────────────────
+  const duration = formatDuration(Date.now() - war.startedAt);
+
+  // ── Status description ───────────────────────────────────────────────────
+  const statusLine = ended
+    ? '> 🏁  This war has concluded — final results below.'
+    : '> ⚔️  War is **active** — use the buttons below to log kills.';
 
   return new EmbedBuilder()
-    .setColor(0xE74C3C)
-    .setTitle(`⚔️ Kill Count — ${war.name}`)
+    .setColor(ended ? 0x2C3E50 : 0xC0392B)
+    .setTitle(ended ? `📜 Battle Report — ${war.name}` : `⚔️  Kill Count — ${war.name}`)
+    .setDescription(statusLine)
     .addFields(
-      { name: '🏆 Leaderboard',   value: board       },
-      { name: '📋 Submissions',   value: submissions  },
-      { name: '📊 Total kills',   value: `${total}`, inline: true },
+      { name: '🏆 Leaderboard',         value: board                    },
+      { name: '📋 Recent Submissions',  value: submissions              },
+      { name: '💀 Total Kills',         value: `\`${total}\``,         inline: true },
+      { name: '🪖 Combatants',          value: `\`${combatants}\``,    inline: true },
+      { name: '⏱️ Duration',            value: `\`${duration}\``,      inline: true },
     )
-    .setFooter({ text: `Started by ${war.startedByName} • Powered by Hypha` })
+    .setFooter({ text: `⚔️ HUSS Command  •  Started by ${war.startedByName}` })
     .setTimestamp(war.startedAt);
 }
 
@@ -430,9 +471,7 @@ module.exports = {
       if (channel) {
         const msg = await channel.messages.fetch(war.messageId).catch(() => null);
         if (msg) {
-          const finalEmbed = buildEmbed(war)
-            .setColor(0x95A5A6)
-            .setTitle(`📜 Kill Count — ${war.name} (Ended)`);
+          const finalEmbed = buildEmbed(war, true);
           await msg.edit({ embeds: [finalEmbed], components: [] }).catch(() => {});
         }
       }
@@ -485,7 +524,7 @@ module.exports = {
       if (channel) {
         const msg = await channel.messages.fetch(war.messageId).catch(() => null);
         if (msg) {
-          const finalEmbed = buildEmbed(war).setColor(0x95A5A6).setTitle(`📜 Kill Count — ${war.name} (Ended)`);
+          const finalEmbed = buildEmbed(war, true);
           await msg.edit({ embeds: [finalEmbed], components: [] }).catch(() => {});
         }
       }
