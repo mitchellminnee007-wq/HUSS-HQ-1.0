@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { getConfig } = require('../utils/config');
 
 const COLLIE_ROLE_ID       = '1386230860587733123';
 const UNVERIFIED_ROLE_ID   = '1386229683963826346';
@@ -30,29 +31,53 @@ function isOfficer(member) {
 }
 
 // ── Core rollover logic ───────────────────────────────────────────────────────
-async function executeRollover(guild, notifyChannelId) {
+async function executeRollover(guild, notifyChannelId, dryRun = false) {
   await guild.members.fetch();
 
-  const collieRole       = guild.roles.cache.get(COLLIE_ROLE_ID);
-  const unverifiedRole   = guild.roles.cache.get(UNVERIFIED_ROLE_ID);
-  const formerMemberRole = guild.roles.cache.get(FORMER_MEMBER_ROLE_ID);
+  const activeRoleId = getConfig(guild.id, 'ACTIVE_WAR_ROLE_ID') || COLLIE_ROLE_ID;
+  const allyRoleId = getConfig(guild.id, 'ALLY_ROLE_ID') || null;
 
-  if (!collieRole) {
-    console.warn(`[Rollover] Collie role not found in guild ${guild.id}`);
-    return 0;
-  }
+  const activeRole       = activeRoleId ? (guild.roles.cache.get(activeRoleId) ?? await guild.roles.fetch(activeRoleId).catch(() => null)) : null;
+  const allyRole         = allyRoleId ? (guild.roles.cache.get(allyRoleId) ?? await guild.roles.fetch(allyRoleId).catch(() => null)) : null;
+  const unverifiedRole   = guild.roles.cache.get(UNVERIFIED_ROLE_ID) ?? await guild.roles.fetch(UNVERIFIED_ROLE_ID).catch(() => null);
+  const formerMemberRole = guild.roles.cache.get(FORMER_MEMBER_ROLE_ID) ?? await guild.roles.fetch(FORMER_MEMBER_ROLE_ID).catch(() => null);
 
-  const targets = [...collieRole.members.values()];
-  let processed = 0;
+  let alliesRemoved = 0;
+  let alliesFailed = 0;
+  let membersReset = 0;
+  let membersFailed = 0;
 
-  for (const member of targets) {
-    try {
-      await member.roles.remove(collieRole);
-      if (unverifiedRole)   await member.roles.add(unverifiedRole);
-      if (formerMemberRole) await member.roles.add(formerMemberRole);
-      processed++;
-    } catch (err) {
-      console.warn(`[Rollover] Could not update roles for ${member.user.tag}:`, err.message);
+  const members = [...guild.members.cache.values()];
+
+  for (const member of members) {
+    // Remove ally role if present
+    if (allyRole && member.roles.cache.has(allyRole.id)) {
+      try {
+        if (!dryRun) await member.roles.remove(allyRole);
+        if (!dryRun && unverifiedRole) await member.roles.add(unverifiedRole);
+        alliesRemoved++;
+      } catch (err) {
+        alliesFailed++;
+        console.warn(`[Rollover] Could not remove ally role from ${member.user.tag}:`, err.message);
+      }
+    }
+
+    // If the member does NOT have the active war role, clear their roles and add unverified/former
+    if (!activeRole || !member.roles.cache.has(activeRole.id)) {
+      try {
+        if (!dryRun) {
+          const rolesToRemove = member.roles.cache.filter(r => r.id !== guild.id).map(r => r.id);
+          for (const rid of rolesToRemove) {
+            try { await member.roles.remove(rid); } catch {}
+          }
+          if (unverifiedRole)   await member.roles.add(unverifiedRole);
+          if (formerMemberRole) await member.roles.add(formerMemberRole);
+        }
+        membersReset++;
+      } catch (err) {
+        membersFailed++;
+        console.warn(`[Rollover] Could not reset roles for ${member.user.tag}:`, err.message);
+      }
     }
   }
 
@@ -62,11 +87,14 @@ async function executeRollover(guild, notifyChannelId) {
     if (channel) {
       const embed = new EmbedBuilder()
         .setColor(0xF39C12)
-        .setTitle('🔄 Automatic Rollover Complete')
-        .setDescription(`The **${ROLLOVER_DAYS}-day** rollover has executed.`)
+        .setTitle(dryRun ? '🔍 Rollover Dry Run Result' : '🔄 Automatic Rollover Complete')
+        .setDescription(dryRun ? `Dry run for the **${ROLLOVER_DAYS}-day** rollover (no changes applied).` : `The **${ROLLOVER_DAYS}-day** rollover has executed.`)
         .addFields(
-          { name: 'Members processed', value: `${processed}`, inline: true },
-          { name: 'Changes applied', value: `Removed: <@&${COLLIE_ROLE_ID}>\nAdded: <@&${UNVERIFIED_ROLE_ID}> + <@&${FORMER_MEMBER_ROLE_ID}>`, inline: false }
+          { name: 'Allies - removed', value: `${alliesRemoved}`, inline: true },
+          { name: 'Allies - failed', value: `${alliesFailed}`, inline: true },
+          { name: 'Members reset', value: `${membersReset}`, inline: true },
+          { name: 'Members - failed', value: `${membersFailed}`, inline: true },
+          { name: 'Notes', value: `Removed ally role: ${allyRole ? `<@&${allyRole.id}>` : '*Not configured*'}\nActive war role: ${activeRole ? `<@&${activeRole.id}>` : '*Not configured (all members will be reset)*'}` + (dryRun ? '\n**Dry run — no role changes were made**' : ''), inline: false }
         )
         .setFooter({ text: 'Powered by Hypha' })
         .setTimestamp();
@@ -74,7 +102,7 @@ async function executeRollover(guild, notifyChannelId) {
     }
   }
 
-  return processed;
+  return { alliesRemoved, alliesFailed, membersReset, membersFailed };
 }
 
 // ── Module export ─────────────────────────────────────────────────────────────
@@ -82,7 +110,7 @@ module.exports = {
   // /startrollover
   data: new SlashCommandBuilder()
     .setName('startrollover')
-    .setDescription(`Schedule the collie → unverified/former-member rollover in ${ROLLOVER_DAYS} days.`)
+    .setDescription(`Schedule the rollover: clear ally role and reset non-active members in ${ROLLOVER_DAYS} days.`)
     .setDMPermission(false),
 
   async execute(interaction) {
@@ -112,7 +140,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0xF39C12)
       .setTitle('⏳ Rollover Scheduled')
-      .setDescription(`In **${ROLLOVER_DAYS} days**, all members with <@&${COLLIE_ROLE_ID}> will automatically be moved to <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`)
+      .setDescription(`In **${ROLLOVER_DAYS} days**, allies will have their ally role cleared and members without the active war role will be moved to <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`)
       .addFields({ name: 'Executes at', value: `<t:${timestamp}:F> (<t:${timestamp}:R>)` })
       .setFooter({ text: `Scheduled by ${interaction.user.tag} • Powered by Hypha` })
       .setTimestamp();
@@ -142,6 +170,30 @@ module.exports = {
     await interaction.reply({ content: '✅ Scheduled rollover has been **cancelled**.', ephemeral: true });
   },
 
+  // /runrollover (immediate test)
+  runData: new SlashCommandBuilder()
+    .setName('runrollover')
+    .setDescription('Run the rollover immediately for testing. Officers only.')
+    .addBooleanOption(opt => opt.setName('dry').setDescription('Dry run — do not apply changes').setRequired(false))
+    .setDMPermission(false),
+
+  async executeRun(interaction) {
+    if (!isOfficer(interaction.member)) {
+      return interaction.reply({ content: 'Only Officers and Commanders can run the rollover.', ephemeral: true });
+    }
+
+    const dry = interaction.options.getBoolean('dry') ?? false;
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const result = await executeRollover(interaction.guild, null, dry);
+      return interaction.editReply({ content: `Rollover ${dry ? 'dry run' : 'executed'} — Allies removed: ${result.alliesRemoved}, Members reset: ${result.membersReset}.` });
+    } catch (err) {
+      console.error('[Rollover] Manual run failed:', err);
+      return interaction.editReply({ content: 'Rollover failed to run. Check logs for details.' });
+    }
+  },
+
   // Background checker — called once on bot startup
   init(client) {
     setInterval(async () => {
@@ -159,8 +211,8 @@ module.exports = {
         }
 
         try {
-          const count = await executeRollover(guild, entry.notifyChannelId);
-          console.log(`[Rollover] Executed for guild ${guildId} — ${count} member(s) updated.`);
+          const result = await executeRollover(guild, entry.notifyChannelId);
+          console.log(`[Rollover] Executed for guild ${guildId} — alliesRemoved=${result.alliesRemoved} membersReset=${result.membersReset}`);
         } catch (err) {
           console.error(`[Rollover] Failed for guild ${guildId}:`, err);
         }

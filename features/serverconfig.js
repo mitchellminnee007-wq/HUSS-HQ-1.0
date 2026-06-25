@@ -16,6 +16,7 @@ const CHANNEL_SETTINGS = [
 
 const ROLE_SETTINGS = [
   { name: 'Active War Role',         value: 'ACTIVE_WAR_ROLE_ID' },
+  { name: 'Ally Role',                value: 'ALLY_ROLE_ID' },
   { name: 'Collie Role',             value: 'COLLIE_ROLE_ID' },
   { name: 'Unverified Role',         value: 'UNVERIFIED_ROLE_ID' },
   { name: 'Former Member Role',      value: 'FORMER_MEMBER_ROLE_ID' },
