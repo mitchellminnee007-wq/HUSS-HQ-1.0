@@ -52,6 +52,8 @@ const VEHICLE_ALIASES = {
   'aa gun':               'AA Gun',
   '120mm':                '120mm',
   'sht':                  'SHT',
+  'talos':                 'Talos',
+  'scout tank':              'Scout Tank',
 };
 
 /**
