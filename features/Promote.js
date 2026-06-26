@@ -40,8 +40,11 @@ module.exports = {
 
     const executor = interaction.member;
     const executorRank = getMemberRank(executor);
-    if (executorRank !== 'Officer' && executorRank !== 'Commander') {
-      return interaction.reply({ content: 'Only Officers and Commanders can promote members.', ephemeral: true });
+    const recruitmentOfficerRole = getRoleByName(interaction.guild, 'Recruitment Officer');
+    const isRecruitmentOfficer = recruitmentOfficerRole && executor.roles.cache.has(recruitmentOfficerRole.id);
+    
+    if (executorRank !== 'Officer' && executorRank !== 'Commander' && !isRecruitmentOfficer) {
+      return interaction.reply({ content: 'Only Officers, Commanders, and Recruitment Officers can promote members.', ephemeral: true });
     }
 
     const targetRank = getMemberRank(target);
@@ -51,8 +54,11 @@ module.exports = {
     }
 
     const nextRank = ranks[currentIndex + 1];
-    if (executorRank === 'Officer' && currentIndex + 1 > highestOfficerPromoteIndex) {
-      return interaction.reply({ content: 'Officers can only promote members up to Dragoon.', ephemeral: true });
+    if (isRecruitmentOfficer && nextRank !== 'Cadet') {
+      return interaction.reply({ content: 'Recruitment Officers can only promote members to Cadet.', ephemeral: true });
+    }
+    if ((executorRank === 'Officer' || isRecruitmentOfficer) && currentIndex + 1 > highestOfficerPromoteIndex) {
+      return interaction.reply({ content: 'Officers and Recruitment Officers can only promote members up to Dragoon.', ephemeral: true });
     }
 
     const nextRole = getRankRole(interaction.guild, nextRank);
