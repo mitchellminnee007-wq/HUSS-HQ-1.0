@@ -80,22 +80,31 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    if (handlerName === 'activitycheck_join') {
-      const command = client.commands.get('activitycheck');
-      if (command && typeof command.handleButton === 'function') {
-        try {
-          await command.handleButton(interaction);
-        } catch (error) {
-          console.error('Error handling activity check button:', error);
-          if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'There was an error processing your request!', ephemeral: true });
-          } else {
-            await interaction.reply({ content: 'There was an error processing your request!', ephemeral: true });
-          }
-        }
+    if (interaction.customId.startsWith('activitycheck_join')) {
+  const command = client.commands.get('activitycheck');
+
+  if (command && typeof command.handleButton === 'function') {
+    try {
+      await command.handleButton(interaction);
+    } catch (error) {
+      console.error('Error handling activity check button:', error);
+
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: 'There was an error processing your request!',
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({
+          content: 'There was an error processing your request!',
+          ephemeral: true
+        });
       }
-      return;
     }
+  }
+
+  return;
+}
 
     if (handlerName.startsWith('ticket_')) {
       const command = client.commands.get('ticketpanel');

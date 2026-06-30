@@ -220,43 +220,43 @@ module.exports = {
   },
 
   async handleButton(interaction) {
-    const parts = interaction.customId.split('_');
-    const endUnix = Number(parts[2]);
+  const parts = interaction.customId.split('_');
+  const endUnix = Number(parts[2]);
 
-    if (!endUnix || Date.now() > endUnix * 1000) {
-      return interaction.reply({
-        content: 'This activity check is already closed.',
-        ephemeral: true
-      });
-    }
-
-    const activityRoleId = getActivityRoleId(interaction.guildId);
-    const role = await getActivityRole(interaction.guild, interaction.guildId);
-
-    if (!role) {
-      return interaction.reply({
-        content: 'The activity check role was not found.',
-        ephemeral: true
-      });
-    }
-
-    const member = interaction.member;
-    const hasRole = member.roles.cache.has(activityRoleId);
-
-    if (hasRole) {
-      await member.roles.remove(role);
-
-      await interaction.reply({
-        content: `You have been **removed** from the **${role.name}** roster.`,
-        ephemeral: true
-      });
-    } else {
-      await member.roles.add(role);
-
-      await interaction.reply({
-        content: `You have been **added** to the **${role.name}** roster.`,
-        ephemeral: true
-      });
-    }
+  if (endUnix && Date.now() > endUnix * 1000) {
+    return interaction.reply({
+      content: 'This activity check is already closed.',
+      ephemeral: true,
+    });
   }
+
+  const activityRoleId = getActivityRoleId(interaction.guildId);
+  const role = await getActivityRole(interaction.guild, interaction.guildId);
+
+  if (!role) {
+    return interaction.reply({
+      content: 'The activity check role was not found.',
+      ephemeral: true,
+    });
+  }
+
+  const member = interaction.member;
+  const hasRole = member.roles.cache.has(activityRoleId);
+
+  if (hasRole) {
+    await member.roles.remove(role);
+
+    return interaction.reply({
+      content: `You have been **removed** from the **${role.name}** roster.`,
+      ephemeral: true,
+    });
+  }
+
+  await member.roles.add(role);
+
+  return interaction.reply({
+    content: `You have been **added** to the **${role.name}** roster.`,
+    ephemeral: true,
+  });
+}
 };
