@@ -52,8 +52,9 @@ const VEHICLE_ALIASES = {
   'aa gun':               'AA Gun',
   '120mm':                '120mm',
   'sht':                  'SHT',
-  'talos':                 'Talos',
-  'scout tank':              'Scout Tank',
+  'talos':                'Talos',
+  'scout tank':           'Scout Tank',
+  'emg':                  'EMG',
 };
 
 /**
@@ -158,6 +159,28 @@ function canAddKills(member) {
   return member.roles.cache.some(r => KILL_RANKS.includes(r.name));
 }
 
+function deleteOwnSubmission(war, callerId, name, amount = null) {
+  const targetName = name.toLowerCase();
+
+  for (let i = war.kills.length - 1; i >= 0; i--) {
+    const entry = war.kills[i];
+    const matchesName = entry.name.toLowerCase() === targetName;
+    const matchesCaller = entry.reportedBy === callerId;
+    const matchesAmount = amount == null || entry.count === amount;
+
+    if (matchesName && matchesCaller && matchesAmount) {
+      const [removed] = war.kills.splice(i, 1);
+      const remaining = war.kills
+        .filter(e => e.name.toLowerCase() === targetName)
+        .reduce((sum, current) => sum + current.count, 0);
+
+      return { removed, remaining };
+    }
+  }
+
+  return null;
+}
+
 // ── UI helpers ───────────────────────────────────────────────────────────────
 /**
  * Renders a compact ASCII progress bar.
@@ -258,6 +281,11 @@ function buildPanelRow(msgId) {
       .setEmoji('🔄')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
+      .setCustomId(`kc_delete:${msgId}`)
+      .setLabel('Delete Kills')
+      .setEmoji('🗑️')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
       .setCustomId(`kc_end:${msgId}`)
       .setLabel('End War')
       .setEmoji('📜')
@@ -318,6 +346,23 @@ module.exports = {
           opt.setName('name')
             .setDescription('Player name to remove')
             .setRequired(true)
+        )
+    )
+
+    // /killcount delete
+    .addSubcommand(sub =>
+      sub.setName('delete')
+        .setDescription('Delete one of your own kill submissions.')
+        .addStringOption(opt =>
+          opt.setName('name')
+            .setDescription('Tank name from your submission')
+            .setRequired(true)
+        )
+        .addIntegerOption(opt =>
+          opt.setName('amount')
+            .setDescription('Exact amount from that submission (optional)')
+            .setRequired(false)
+            .setMinValue(1)
         )
     )
 
@@ -441,6 +486,50 @@ module.exports = {
       return interaction.reply({ content: `✅ Removed **${name}** from the kill count.`, ephemeral: true });
     }
 
+    // ── /killcount delete ──────────────────────────────────────────────────
+    if (sub === 'delete') {
+      const war = getActive(guildId);
+      if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
+
+      const name = normalizeName(interaction.options.getString('name', true));
+      const amount = interaction.options.getInteger('amount');
+      const callerId = interaction.user.id;
+
+      let index = -1;
+      for (let i = war.kills.length - 1; i >= 0; i--) {
+        const entry = war.kills[i];
+        const matchesName = entry.name.toLowerCase() === name.toLowerCase();
+        const matchesCaller = entry.reportedBy === callerId;
+        const matchesAmount = amount == null || entry.count === amount;
+        if (matchesName && matchesCaller && matchesAmount) {
+          index = i;
+          break;
+        }
+      }
+
+      if (index === -1) {
+        return interaction.reply({
+          content: amount == null
+            ? `❌ No submission found for **${name}** from you.`
+            : `❌ No submission found for **${name}** with **${amount}** kill${amount === 1 ? '' : 's'} from you.`,
+          ephemeral: true,
+        });
+      }
+
+      const [removed] = war.kills.splice(index, 1);
+      saveActive(guildId, war);
+      await refreshPanel(interaction.guild, war);
+
+      const remaining = war.kills
+        .filter(e => e.name.toLowerCase() === removed.name.toLowerCase())
+        .reduce((sum, entry) => sum + entry.count, 0);
+
+      return interaction.reply({
+        content: `✅ Deleted your submission of **${removed.count}** kill${removed.count === 1 ? '' : 's'} for **${removed.name}**. Remaining total: **${remaining}**.`,
+        ephemeral: true,
+      });
+    }
+
     // ── /killcount reset ───────────────────────────────────────────────────
     if (sub === 'reset') {
       if (!isOfficer(interaction.member)) {
@@ -515,6 +604,23 @@ module.exports = {
       return interaction.reply({ content: '✅ Kill count has been reset to 0.', ephemeral: true });
     }
 
+    if (action === 'kc_delete') {
+      const modal = new ModalBuilder()
+        .setCustomId(`kc_delete_modal:${msgId}`)
+        .setTitle('Delete My Submission');
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder().setCustomId('name').setLabel('Tank name').setStyle(TextInputStyle.Short).setRequired(true)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder().setCustomId('amount').setLabel('Exact amount from that submission (optional)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Leave blank if unsure')
+        ),
+      );
+
+      return interaction.showModal(modal);
+    }
+
     if (action === 'kc_end') {
       if (!isOfficer(interaction.member)) {
         return interaction.reply({ content: 'Only Officers and Commanders can end a war.', ephemeral: true });
@@ -541,7 +647,7 @@ module.exports = {
       const war = getActive(interaction.guildId);
       if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
 
-      const resolved   = resolveVehicleInput(interaction.fields.getTextInputValue('name'));
+      const resolved = resolveVehicleInput(interaction.fields.getTextInputValue('name'));
       const amountStr = interaction.fields.getTextInputValue('amount').trim();
       const amount = parseInt(amountStr, 10);
 
@@ -576,6 +682,38 @@ module.exports = {
       const note = resolved.autoFixed ? ` *(auto-corrected from '${resolved.originalRaw}')*` : '';
       return interaction.reply({
         content: `✅ Added **${amount}** kill${amount !== 1 ? 's' : ''} to **${name}** (total: ${total}).${note}`,
+        ephemeral: true,
+      });
+    }
+
+    if (action === 'kc_delete_modal') {
+      const war = getActive(interaction.guildId);
+      if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
+
+      const name = normalizeName(interaction.fields.getTextInputValue('name'));
+      const amountInput = interaction.fields.getTextInputValue('amount').trim();
+      const amount = amountInput ? parseInt(amountInput, 10) : null;
+
+      if (amountInput && (Number.isNaN(amount) || amount < 1)) {
+        return interaction.reply({ content: '❌ Please enter a valid amount or leave it blank.', ephemeral: true });
+      }
+
+      const deleted = deleteOwnSubmission(war, interaction.user.id, name, amount);
+
+      if (!deleted) {
+        return interaction.reply({
+          content: amount == null
+            ? `❌ No submission found for **${name}** from you.`
+            : `❌ No submission found for **${name}** with **${amount}** kill${amount === 1 ? '' : 's'} from you.`,
+          ephemeral: true,
+        });
+      }
+
+      saveActive(interaction.guildId, war);
+      await refreshPanel(interaction.guild, war);
+
+      return interaction.reply({
+        content: `✅ Deleted your submission of **${deleted.removed.count}** kill${deleted.removed.count === 1 ? '' : 's'} for **${deleted.removed.name}**. Remaining total: **${deleted.remaining}**.`,
         ephemeral: true,
       });
     }
