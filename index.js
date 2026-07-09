@@ -358,6 +358,10 @@ const featureFiles = fs.existsSync(featuresPath)
   : [];
 
 for (const file of featureFiles) {
+  if (file === 'rollback-active-members-15min.js') {
+    continue;
+  }
+
   const featurePath = path.join(featuresPath, file);
   try {
     const feature = require(featurePath);
