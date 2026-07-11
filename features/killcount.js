@@ -55,6 +55,8 @@ const VEHICLE_ALIASES = {
   'talos':                'Talos',
   'scout tank':           'Scout Tank',
   'emg':                  'EMG',
+  'fmg':                  'FMG',
+  'ac':                   'AC',
 };
 
 /**
