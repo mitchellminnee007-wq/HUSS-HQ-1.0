@@ -40,7 +40,9 @@ const VEHICLE_ALIASES = {
   'htd':                  'HTD',
   'lordscar':             'Lordscar',
   'heavy truck':          'Heavy Truck',
-  'acv':                  'ACV',
+  'acv':                  'Armored Car',
+  'armored car':          'Armored Car',
+  'armoured car':         'Armored Car',
   'halftrack':            'Halftrack',
   'medium ship':          'Medium Ship',
   'mg car':               'MG Car',
@@ -56,7 +58,7 @@ const VEHICLE_ALIASES = {
   'scout tank':           'Scout Tank',
   'emg':                  'EMG',
   'fmg':                  'FMG',
-  'ac':                   'AC',
+  'ac':                   'Armoured Car',
 };
 
 /**
