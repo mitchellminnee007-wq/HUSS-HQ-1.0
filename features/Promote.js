@@ -41,9 +41,11 @@ module.exports = {
     const executor = interaction.member;
     const executorRank = getMemberRank(executor);
     const recruitmentOfficerRole = getRoleByName(interaction.guild, 'Recruitment Officer');
-    const isRecruitmentOfficer = recruitmentOfficerRole && executor.roles.cache.has(recruitmentOfficerRole.id);
+    const hasRecruitmentOfficerRole = recruitmentOfficerRole && executor.roles.cache.has(recruitmentOfficerRole.id);
+    const isOfficerOrCommander = executorRank === 'Officer' || executorRank === 'Commander';
+    const isRecruitmentOfficer = hasRecruitmentOfficerRole && !isOfficerOrCommander;
     
-    if (executorRank !== 'Officer' && executorRank !== 'Commander' && !isRecruitmentOfficer) {
+    if (!isOfficerOrCommander && !isRecruitmentOfficer) {
       return interaction.reply({ content: 'Only Officers, Commanders, and Recruitment Officers can promote members.', ephemeral: true });
     }
 
@@ -57,7 +59,7 @@ module.exports = {
     if (isRecruitmentOfficer && nextRank !== 'Cadet') {
       return interaction.reply({ content: 'Recruitment Officers can only promote members to Cadet.', ephemeral: true });
     }
-    if ((executorRank === 'Officer' || isRecruitmentOfficer) && currentIndex + 1 > highestOfficerPromoteIndex) {
+    if ((isOfficerOrCommander || isRecruitmentOfficer) && currentIndex + 1 > highestOfficerPromoteIndex) {
       return interaction.reply({ content: 'Officers and Recruitment Officers can only promote members up to Dragoon.', ephemeral: true });
     }
 
