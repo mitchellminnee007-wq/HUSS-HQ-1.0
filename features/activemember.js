@@ -50,7 +50,7 @@ module.exports = {
         .setName('minutes')
         .setDescription('How long should the activity check stay open?')
         .setMinValue(1)
-        .setMaxValue(1440)
+        .setMaxValue(5760)
         .setRequired(false)
     )
     .setDMPermission(false),
