@@ -80,7 +80,7 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    if (interaction.customId.startsWith('activitycheck_join')) {
+    if (interaction.customId.startsWith('activitycheck_')) {
   const command = client.commands.get('activitycheck');
 
   if (command && typeof command.handleButton === 'function') {

@@ -9,7 +9,7 @@ const { getConfig } = require('../utils/config');
 
 const DEFAULT_ACTIVITY_ROLE_ID = '1424722021325082625';
 const OFFICER_RANKS = ['Officer', 'Commander'];
-const DEFAULT_TIMER_MINUTES = 30;
+const DEFAULT_TIMER_MINUTES = 5760;
 
 function isOfficer(member) {
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
@@ -31,12 +31,17 @@ function getActivityMembers(guild, roleId) {
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
-function buildActivityRow(endUnix, disabled = false) {
+function buildActivityRow(endUnix, disabled = false, cancelled = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`activitycheck_join_${endUnix}`)
-      .setLabel(disabled ? 'Activity Check Closed' : 'Mark Active')
+      .setLabel(disabled ? (cancelled ? 'Activity Check Cancelled' : 'Activity Check Closed') : 'Mark Active')
       .setStyle(ButtonStyle.Danger)
+      .setDisabled(disabled),
+    new ButtonBuilder()
+      .setCustomId(`activitycheck_cancel_${endUnix}`)
+      .setLabel(disabled ? (cancelled ? 'Activity Check Cancelled' : 'Activity Check Closed') : 'Cancel Activity Check')
+      .setStyle(ButtonStyle.Secondary)
       .setDisabled(disabled)
   );
 }
@@ -92,6 +97,11 @@ module.exports = {
 
     setTimeout(async () => {
       try {
+        const currentMessage = await message.channel.messages.fetch(message.id).catch(() => null);
+        if (!currentMessage || currentMessage.embeds[0]?.title !== 'Activity Check') {
+          return;
+        }
+
         const closedEmbed = EmbedBuilder.from(embed)
           .setColor(0x7F8C8D)
           .setTitle('Activity Check Closed')
@@ -220,43 +230,74 @@ module.exports = {
   },
 
   async handleButton(interaction) {
-  const parts = interaction.customId.split('_');
-  const endUnix = Number(parts[2]);
+    const parts = interaction.customId.split('_');
+    const action = parts[1];
+    const endUnix = Number(parts[2]);
 
-  if (endUnix && Date.now() > endUnix * 1000) {
+    if (endUnix && Date.now() > endUnix * 1000) {
+      return interaction.reply({
+        content: 'This activity check is already closed.',
+        ephemeral: true,
+      });
+    }
+
+    const role = await getActivityRole(interaction.guild, interaction.guildId);
+
+    if (!role) {
+      return interaction.reply({
+        content: 'The activity check role was not found.',
+        ephemeral: true,
+      });
+    }
+
+    if (action === 'cancel') {
+      if (!isOfficer(interaction.member)) {
+        return interaction.reply({
+          content: 'Only Officers and Commanders can cancel an activity check.',
+          ephemeral: true,
+        });
+      }
+
+      const cancelledEmbed = new EmbedBuilder()
+        .setColor(0x7F8C8D)
+        .setTitle('Activity Check Cancelled')
+        .setDescription(
+          `This activity check was cancelled early.\n\n` +
+          `The **${role.name}** roster is no longer collecting responses.\n\n` +
+          `⛔ **Cancelled:** <t:${Math.floor(Date.now() / 1000)}:F>`
+        )
+        .setFooter({ text: 'Powered by Hypha' })
+        .setTimestamp();
+
+      await interaction.message.edit({
+        embeds: [cancelledEmbed],
+        components: [buildActivityRow(endUnix, true, true)]
+      });
+
+      return interaction.reply({
+        content: '✅ Activity check has been **cancelled**.',
+        ephemeral: true,
+      });
+    }
+
+    const activityRoleId = getActivityRoleId(interaction.guildId);
+    const member = interaction.member;
+    const hasRole = member.roles.cache.has(activityRoleId);
+
+    if (hasRole) {
+      await member.roles.remove(role);
+
+      return interaction.reply({
+        content: `You have been **removed** from the **${role.name}** roster.`,
+        ephemeral: true,
+      });
+    }
+
+    await member.roles.add(role);
+
     return interaction.reply({
-      content: 'This activity check is already closed.',
+      content: `You have been **added** to the **${role.name}** roster.`,
       ephemeral: true,
     });
-  }
-
-  const activityRoleId = getActivityRoleId(interaction.guildId);
-  const role = await getActivityRole(interaction.guild, interaction.guildId);
-
-  if (!role) {
-    return interaction.reply({
-      content: 'The activity check role was not found.',
-      ephemeral: true,
-    });
-  }
-
-  const member = interaction.member;
-  const hasRole = member.roles.cache.has(activityRoleId);
-
-  if (hasRole) {
-    await member.roles.remove(role);
-
-    return interaction.reply({
-      content: `You have been **removed** from the **${role.name}** roster.`,
-      ephemeral: true,
-    });
-  }
-
-  await member.roles.add(role);
-
-  return interaction.reply({
-    content: `You have been **added** to the **${role.name}** roster.`,
-    ephemeral: true,
-  });
 }
 };
