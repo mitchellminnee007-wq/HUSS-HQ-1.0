@@ -34,8 +34,19 @@ function writeStore(data) {
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
 }
 
+function normalizeTraining(training) {
+  if (!training || typeof training !== 'object') return null;
+
+  training.attendees ??= {};
+  for (const key of ['accepted', 'declined', 'tentative']) {
+    if (!Array.isArray(training.attendees[key])) training.attendees[key] = [];
+  }
+
+  return training;
+}
+
 function getTraining(guildId, msgId) {
-  return readStore().guilds[guildId]?.[msgId] ?? null;
+  return normalizeTraining(readStore().guilds[guildId]?.[msgId]);
 }
 
 function saveTraining(guildId, msgId, data) {
@@ -61,6 +72,8 @@ function clearReminder(guildId, msgId) {
 }
 
 async function sendTrainingReminder(client, guildId, msgId, tr) {
+  tr = normalizeTraining(tr);
+  if (!tr) return;
   if (tr.reminderSent) return;
 
   const acceptedIds = tr.attendees.accepted.map(member => member.id);
