@@ -138,7 +138,6 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
       console.log(`[Rollover] Skipping bot: ${member.user.tag}`);
       continue;
     }
-
     if (member.id === guild.ownerId) {
       console.log(`[Rollover] Skipping server owner: ${member.user.tag}`);
       continue;
@@ -159,7 +158,6 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
         if (!canEditRole(allyRole)) {
           throw new Error(`Bot cannot remove ally role "${allyRole.name}". Bot role is probably too low.`);
         }
-
         if (!dryRun) {
           await member.roles.remove(allyRole);
         }
@@ -464,6 +462,17 @@ module.exports = {
           `Role actions failed: **${result.rolesFailed}**\n\n` +
           `Active role used: <@&${ACTIVE_ROLE_ID}>\n` +
           `Check your bot console for detailed role errors.`
+      }).catch(async replyError => {
+        if (replyError.code !== 50027) throw replyError;
+        await interaction.channel.send({
+          content:
+            `Rollover ${dry ? 'dry run completed' : 'executed'} in the channel.\n\n` +
+            `Active members skipped: **${result.activeMembersSkipped}**\n` +
+            `Members reset: **${result.membersReset}**\n` +
+            `Allies removed: **${result.alliesRemoved}**\n` +
+            `Roles removed: **${result.rolesRemoved}**\n` +
+            `Role actions failed: **${result.rolesFailed}**`
+        }).catch(() => {});
       });
     } catch (err) {
       console.error('[Rollover] Manual run failed:', err);
@@ -476,7 +485,7 @@ module.exports = {
     }
   },
 
-  // Background checker — call once on bot startup
+  // Background checker - call once on bot startup
   init(client) {
     if (intervalStarted) {
       console.warn('[Rollover] init() was called more than once. Ignoring duplicate interval.');
