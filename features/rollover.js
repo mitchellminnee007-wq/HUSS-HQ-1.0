@@ -9,12 +9,34 @@ const FORMER_MEMBER_ROLE_ID = '1426128855202271242';
 
 const ROLLOVER_DAYS  = 4;
 const ROLLOVER_MS = 4 * 24 * 60 * 60 * 1000;
+const ROLLOVER_COOLDOWN_MS = 60 * 1000;
 const CHECK_INTERVAL = 5 * 60 * 1000; // check every 5 minutes
 const STORE_PATH     = path.join(__dirname, '..', 'data', 'rollover.json');
 
 const OFFICER_RANKS = ['Officer', 'Commander'];
 
 let intervalStarted = false;
+const rolloverInProgress = new Set();
+const lastRolloverAttempt = new Map();
+
+function acquireRollover(guildId) {
+  if (rolloverInProgress.has(guildId)) {
+    return { allowed: false, reason: 'already running' };
+  }
+
+  const remainingMs = ROLLOVER_COOLDOWN_MS - (Date.now() - (lastRolloverAttempt.get(guildId) ?? 0));
+  if (remainingMs > 0) {
+    return { allowed: false, reason: 'cooldown', remainingMs };
+  }
+
+  rolloverInProgress.add(guildId);
+  return { allowed: true };
+}
+
+function releaseRollover(guildId) {
+  rolloverInProgress.delete(guildId);
+  lastRolloverAttempt.set(guildId, Date.now());
+}
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
 
@@ -276,6 +298,12 @@ async function checkScheduledRollovers(client) {
     }
 
     try {
+      const gate = acquireRollover(guildId);
+      if (!gate.allowed) {
+        console.warn(`[Rollover] Skipping scheduled run for guild ${guildId}: ${gate.reason}.`);
+        continue;
+      }
+
       const result = await executeRollover(guild, entry.notifyChannelId, false);
 
       console.log(
@@ -286,12 +314,13 @@ async function checkScheduledRollovers(client) {
         `rolesRemoved=${result.rolesRemoved}, ` +
         `rolesFailed=${result.rolesFailed}`
       );
+      delete store.guilds[guildId];
+      changed = true;
     } catch (err) {
       console.error(`[Rollover] Failed for guild ${guildId}:`, err);
+    } finally {
+      if (rolloverInProgress.has(guildId)) releaseRollover(guildId);
     }
-
-    delete store.guilds[guildId];
-    changed = true;
   }
 
   if (changed) {
@@ -412,6 +441,14 @@ module.exports = {
 
     const dry = interaction.options.getBoolean('dry') ?? false;
 
+    const gate = acquireRollover(interaction.guildId);
+    if (!gate.allowed) {
+      const message = gate.reason === 'cooldown'
+        ? `Please wait ${Math.ceil(gate.remainingMs / 1000)} seconds before running another rollover.`
+        : 'A rollover is already running for this server. Please wait for it to finish.';
+      return interaction.reply({ content: message, ephemeral: true });
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
     try {
@@ -434,6 +471,8 @@ module.exports = {
       return interaction.editReply({
         content: 'Rollover failed to run. Check your bot console for details.'
       });
+    } finally {
+      releaseRollover(interaction.guildId);
     }
   },
 
