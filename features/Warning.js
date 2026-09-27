@@ -419,7 +419,7 @@ module.exports = {
     .setDMPermission(false),
 
   init(client) {
-    client.once('ready', async () => {
+    client.once('clientReady', async () => {
       await sendAutomatedRemovalVotes(client).catch(error => {
         console.error('Error sending automated warning removal votes:', error);
       });

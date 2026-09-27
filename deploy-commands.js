@@ -38,6 +38,9 @@ for (const dir of commandDirs) {
       if (command.cancelData) {
         commands.push(command.cancelData.toJSON());
       }
+      if (command.runData) {
+        commands.push(command.runData.toJSON());
+      }
     }
   }
 }

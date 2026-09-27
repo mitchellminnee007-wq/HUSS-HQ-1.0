@@ -16,7 +16,7 @@ const { getConfig, getAllConfig } = require('../utils/config');
 const DEFAULT_PANEL_CHANNEL_ID = '1509618529274560733';
 const OFFICER_RANKS = ['Officer', 'Commander'];
 const DEFAULT_WAR_ROLE_ID = '1424722021325082625';
-const DEFAULT_ACTIVITY_TIMER_MINUTES = 30;
+const DEFAULT_ACTIVITY_TIMER_MINUTES = 5760;
 
 function isOfficer(member) {
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
@@ -232,6 +232,11 @@ function buildSignupRow(endUnix, disabled = false) {
       .setLabel(disabled ? 'Activity Check Closed' : 'Mark Active')
       .setStyle(ButtonStyle.Danger)
       .setDisabled(disabled),
+    new ButtonBuilder()
+      .setCustomId(`activitycheck_cancel_${endUnix}`)
+      .setLabel(disabled ? 'Activity Check Closed' : 'Cancel Activity Check')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(disabled),
   );
 }
 
@@ -348,7 +353,7 @@ function buildSignupChannelModal() {
         new TextInputBuilder()
           .setCustomId('signup_minutes')
           .setLabel('Timer in minutes')
-          .setPlaceholder('e.g. 30, 60, 1440')
+          .setPlaceholder('e.g. 30, 60, 1440, 5760')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(10),
@@ -725,9 +730,9 @@ module.exports = {
         minutes = DEFAULT_ACTIVITY_TIMER_MINUTES;
       }
 
-      // Limit to 24 hours, so nobody accidentally enters a huge timer.
-      if (minutes > 1440) {
-        minutes = 1440;
+      // Limit to the configured maximum to avoid accidental huge timers.
+      if (minutes > DEFAULT_ACTIVITY_TIMER_MINUTES) {
+        minutes = DEFAULT_ACTIVITY_TIMER_MINUTES;
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -750,6 +755,12 @@ module.exports = {
 
       setTimeout(async () => {
         try {
+          const currentMessage = await activityMessage.channel.messages.fetch(activityMessage.id).catch(() => null);
+
+          if (!currentMessage || currentMessage.embeds[0]?.title !== 'Activity Check') {
+            return;
+          }
+
           await activityMessage.edit({
             embeds: [buildSignupEmbed(interaction.guild, endUnix, true)],
             components: [buildSignupRow(endUnix, true)],

@@ -67,6 +67,12 @@ for (const dir of commandDirs) {
           execute: command.executeCancel
         });
       }
+      if (command.runData && typeof command.executeRun === 'function') {
+        client.commands.set(command.runData.name, {
+          data: command.runData,
+          execute: command.executeRun
+        });
+      }
       if (typeof command.init === 'function') {
         command.init(client);
       }
@@ -100,7 +106,7 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    if (interaction.customId.startsWith('activitycheck_join')) {
+    if (interaction.customId.startsWith('activitycheck_')) {
   const command = client.commands.get('activitycheck');
 
   if (command && typeof command.handleButton === 'function') {
