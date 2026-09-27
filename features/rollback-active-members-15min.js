@@ -296,7 +296,11 @@ async function main() {
   await client.login(TOKEN);
 }
 
-main().catch(err => {
-  console.error('[Rollback] Fatal error:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(err => {
+    console.error('[Rollback] Fatal error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { main };

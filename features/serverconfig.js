@@ -12,6 +12,12 @@ const CHANNEL_SETTINGS = [
   { name: 'Operations Channel',     value: 'OPERATIONS_CHANNEL_ID' },
   { name: 'Trainings Channel',      value: 'TRAININGS_CHANNEL_ID' },
   { name: 'Kill Count Channel',     value: 'KILLCOUNT_CHANNEL_ID' },
+  { name: 'WHL Logistics Forum',    value: 'WHL_LOGISTICS_FORUM_ID' },
+];
+
+const STRING_SETTINGS = [
+  { name: 'WHL Guild ID', value: 'WHL_GUILD_ID' },
+  { name: 'WHL Logistics Forum', value: 'WHL_LOGISTICS_FORUM_ID' },
 ];
 
 const ROLE_SETTINGS = [
@@ -42,8 +48,25 @@ module.exports = {
         )
         .addChannelOption(opt =>
           opt.setName('channel')
-            .setDescription('The channel to use')
-            .addChannelTypes(ChannelType.GuildText)
+            .setDescription('The channel or forum to use')
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildForum)
+            .setRequired(true)
+        )
+    )
+
+    // /config set-string
+    .addSubcommand(sub =>
+      sub.setName('set-string')
+        .setDescription('Set a guild or forum ID for cross-server features.')
+        .addStringOption(opt =>
+          opt.setName('setting')
+            .setDescription('Which setting to configure')
+            .setRequired(true)
+            .addChoices(...STRING_SETTINGS)
+        )
+        .addStringOption(opt =>
+          opt.setName('value')
+            .setDescription('The ID or value to store')
             .setRequired(true)
         )
     )
@@ -91,10 +114,35 @@ module.exports = {
       const channel = interaction.options.getChannel('channel', true);
       const label   = CHANNEL_SETTINGS.find(s => s.value === key)?.name ?? key;
 
+      if (key === 'WHL_LOGISTICS_FORUM_ID' && channel.type !== ChannelType.GuildForum) {
+        return interaction.reply({
+          content: '❌ **WHL Logistics Forum** must be a Discord Forum channel from the WHL guild. `#task-board` is not a forum channel.',
+          ephemeral: true
+        });
+      }
+
       setConfig(interaction.guildId, key, channel.id);
 
       return interaction.reply({
         content: `✅ **${label}** has been set to ${channel}.`,
+        ephemeral: true
+      });
+    }
+
+    // ── /config set-role ────────────────────────────────────────────────────
+    if (sub === 'set-string') {
+      const key   = interaction.options.getString('setting', true);
+      const value = interaction.options.getString('value', true).trim();
+      const label = STRING_SETTINGS.find(s => s.value === key)?.name ?? key;
+
+      if (!value) {
+        return interaction.reply({ content: 'Please provide a valid value.', ephemeral: true });
+      }
+
+      setConfig(interaction.guildId, key, value);
+
+      return interaction.reply({
+        content: `✅ **${label}** has been set to \`${value}\`.`,
         ephemeral: true
       });
     }
@@ -145,11 +193,18 @@ module.exports = {
         inline: true
       }));
 
+      const stringFields = STRING_SETTINGS.map(s => ({
+        name: s.name,
+        value: cfg[s.value] || '*Not set*',
+        inline: true
+      }));
+
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('⚙️ Server Configuration')
         .addFields(
           ...channelFields,
+          ...stringFields,
           ...roleFields,
           { name: 'Welcome Image', value: cfg.WELCOME_IMAGE_URL ? `[Link](${cfg.WELCOME_IMAGE_URL})` : '*Not set*', inline: true }
         )
