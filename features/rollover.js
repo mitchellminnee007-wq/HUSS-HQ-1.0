@@ -1,6 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} = require('discord.js');
 const { getConfig } = require('../utils/config');
 
 const ACTIVE_ROLE_ID        = '1424722021325082625'; // Active role
@@ -70,6 +76,59 @@ function roleName(role) {
 
 function canEditRole(role) {
   return role && role.editable && !role.managed;
+}
+
+async function clearActiveMembers(guild) {
+  await guild.members.fetch();
+  const activeRole = guild.roles.cache.get(ACTIVE_ROLE_ID)
+    ?? await guild.roles.fetch(ACTIVE_ROLE_ID).catch(() => null);
+
+  if (!activeRole) return { role: null, removed: 0, failed: 0 };
+
+  let removed = 0;
+  let failed = 0;
+  const members = [...guild.members.cache.values()]
+    .filter(member => !member.user.bot && member.roles.cache.has(activeRole.id));
+
+  for (const member of members) {
+    try {
+      if (!canEditRole(activeRole)) throw new Error('role hierarchy prevents removal');
+      await member.roles.remove(activeRole);
+      removed++;
+    } catch (error) {
+      failed++;
+      console.warn(`[Rollover] Could not clear active role from ${member.user.tag}:`, error.message);
+    }
+  }
+
+  return { role: activeRole, removed, failed };
+}
+
+function buildActivityCheckMessage(roleName, endUnix) {
+  const embed = new EmbedBuilder()
+    .setColor(0xE74C3C)
+    .setTitle('Activity Check')
+    .setDescription(
+      `The previous Active Member roster has been cleared.\n\n` +
+      `Click **Mark Active** below to add yourself to the **${roleName}** roster.\n\n` +
+      `⏳ **Closes:** <t:${endUnix}:R>\n` +
+      `🕒 **Exact time:** <t:${endUnix}:F>`
+    )
+    .setFooter({ text: 'Powered by Hypha' })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`activitycheck_join_${endUnix}`)
+      .setLabel('Mark Active')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`activitycheck_cancel_${endUnix}`)
+      .setLabel('Cancel Activity Check')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return { embeds: [embed], components: [row] };
 }
 
 // ── Core rollover logic ───────────────────────────────────────────────────────
@@ -356,33 +415,56 @@ module.exports = {
       });
     }
 
-    const executeAt = Date.now() + ROLLOVER_MS;
+    const gate = acquireRollover(interaction.guildId);
+    if (!gate.allowed) {
+      return interaction.reply({
+        content: 'A rollover is already running or was just started. Please wait before trying again.',
+        ephemeral: true
+      });
+    }
 
-    store.guilds[interaction.guildId] = {
-      executeAt,
-      notifyChannelId: interaction.channelId,
-      startedBy: interaction.user.id
-    };
+    await interaction.deferReply({ ephemeral: true });
 
-    writeStore(store);
+    try {
+      const cleared = await clearActiveMembers(interaction.guild);
+      if (!cleared.role) {
+        return interaction.editReply('The Active Member role was not found. No rollover was scheduled.');
+      }
 
-    const timestamp = Math.floor(executeAt / 1000);
+      const executeAt = Date.now() + ROLLOVER_MS;
+      store.guilds[interaction.guildId] = {
+        executeAt,
+        notifyChannelId: interaction.channelId,
+        startedBy: interaction.user.id
+      };
+      writeStore(store);
 
-    const embed = new EmbedBuilder()
-      .setColor(0xF39C12)
-      .setTitle('⏳ Rollover Scheduled')
-      .setDescription(
-        `In **${ROLLOVER_DAYS} days**, members without the active role <@&${ACTIVE_ROLE_ID}> will have their roles removed and will receive <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`
-      )
-      .addFields(
-        { name: 'Executes at', value: `<t:${timestamp}:F> (<t:${timestamp}:R>)` },
-        { name: 'Active role', value: `<@&${ACTIVE_ROLE_ID}>`, inline: true },
-        { name: 'Test now', value: 'Use `/runrollover dry:true` to simulate or `/runrollover dry:false` to actually run it now.' }
-      )
-      .setFooter({ text: `Scheduled by ${interaction.user.tag} • Powered by Hypha` })
-      .setTimestamp();
+      const timestamp = Math.floor(executeAt / 1000);
+      const roleName = cleared.role.name;
+      await interaction.channel.send(buildActivityCheckMessage(roleName, timestamp));
 
-    return interaction.reply({ embeds: [embed] });
+      const embed = new EmbedBuilder()
+        .setColor(0xF39C12)
+        .setTitle('⏳ Rollover Scheduled')
+        .setDescription(
+          `The existing **${roleName}** roster was cleared. Members must click **Mark Active** in the activity check message to stay active.\n\n` +
+          `In **${ROLLOVER_DAYS} days**, members without the active role will have their roles removed and receive <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`
+        )
+        .addFields(
+          { name: 'Members cleared', value: `${cleared.removed}`, inline: true },
+          { name: 'Could not clear', value: `${cleared.failed}`, inline: true },
+          { name: 'Executes at', value: `<t:${timestamp}:F> (<t:${timestamp}:R>)` }
+        )
+        .setFooter({ text: `Scheduled by ${interaction.user.tag} • Powered by Hypha` })
+        .setTimestamp();
+
+      return interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error('[Rollover] Could not start rollover:', error);
+      return interaction.editReply('Could not start the rollover. Check the bot console for details.');
+    } finally {
+      releaseRollover(interaction.guildId);
+    }
   },
 
   // /cancelrollover
