@@ -1,0 +1,4794 @@
+{
+  "locations": [
+    {
+      "name": "Acrithia",
+      "aliases": [
+        "Acrithia",
+        "Acrithia Hex",
+        "Acrithia Region",
+        "acrithia",
+        "Patridia",
+        "Legion Ranch",
+        "Thetus Ring",
+        "The Brinehold",
+        "Camp Omicron",
+        "Heir Apparent",
+        "Nereid Keep",
+        "Swordfort",
+        "legion ranch",
+        "patridia",
+        "thetus ring",
+        "the brinehold",
+        "camp omicron",
+        "heir apparent",
+        "nereid keep",
+        "swordfort"
+      ],
+      "regions": [
+        {
+          "name": "Legion Ranch",
+          "aliases": [
+            "Legion Ranch",
+            "legion ranch",
+            "legionranch"
+          ]
+        },
+        {
+          "name": "Patridia",
+          "aliases": [
+            "Patridia",
+            "patridia"
+          ]
+        },
+        {
+          "name": "Thetus Ring",
+          "aliases": [
+            "Thetus Ring",
+            "thetus ring",
+            "thetusring"
+          ]
+        },
+        {
+          "name": "The Brinehold",
+          "aliases": [
+            "The Brinehold",
+            "the brinehold",
+            "thebrinehold"
+          ]
+        },
+        {
+          "name": "Camp Omicron",
+          "aliases": [
+            "Camp Omicron",
+            "camp omicron",
+            "campomicron"
+          ]
+        },
+        {
+          "name": "Heir Apparent",
+          "aliases": [
+            "Heir Apparent",
+            "heir apparent",
+            "heirapparent"
+          ]
+        },
+        {
+          "name": "Nereid Keep",
+          "aliases": [
+            "Nereid Keep",
+            "nereid keep",
+            "nereidkeep"
+          ]
+        },
+        {
+          "name": "Swordfort",
+          "aliases": [
+            "Swordfort",
+            "swordfort"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Allod's Bight",
+      "aliases": [
+        "Allod's Bight",
+        "Allod's Bight Hex",
+        "Allod's Bight Region",
+        "allods bight",
+        "allodsbight",
+        "Mercy's Wail",
+        "Scurvyshire",
+        "Belaying Trace",
+        "Homesick",
+        "Rumhold",
+        "The Stone Plank",
+        "The Turncoat",
+        "mercys wail",
+        "scurvyshire",
+        "belaying trace",
+        "homesick",
+        "rumhold",
+        "the stone plank",
+        "the turncoat"
+      ],
+      "regions": [
+        {
+          "name": "Mercy's Wail",
+          "aliases": [
+            "Mercy's Wail",
+            "mercys wail",
+            "mercyswail",
+            "Mercys Wail"
+          ]
+        },
+        {
+          "name": "Scurvyshire",
+          "aliases": [
+            "Scurvyshire",
+            "scurvyshire"
+          ]
+        },
+        {
+          "name": "Belaying Trace",
+          "aliases": [
+            "Belaying Trace",
+            "belaying trace",
+            "belayingtrace"
+          ]
+        },
+        {
+          "name": "Homesick",
+          "aliases": [
+            "Homesick",
+            "homesick"
+          ]
+        },
+        {
+          "name": "Rumhold",
+          "aliases": [
+            "Rumhold",
+            "rumhold"
+          ]
+        },
+        {
+          "name": "The Stone Plank",
+          "aliases": [
+            "The Stone Plank",
+            "the stone plank",
+            "thestoneplank"
+          ]
+        },
+        {
+          "name": "The Turncoat",
+          "aliases": [
+            "The Turncoat",
+            "the turncoat",
+            "theturncoat"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ash Fields",
+      "aliases": [
+        "Ash Fields",
+        "Ash Fields Hex",
+        "Ash Fields Region",
+        "ash fields",
+        "ashfields",
+        "Ashtown",
+        "Electi",
+        "The Ashfort",
+        "The Calamity",
+        "Camp Omega",
+        "Cometa",
+        "Sootflow",
+        "ashtown",
+        "electi",
+        "the ashfort",
+        "the calamity",
+        "camp omega",
+        "cometa",
+        "sootflow"
+      ],
+      "regions": [
+        {
+          "name": "Ashtown",
+          "aliases": [
+            "Ashtown",
+            "ashtown"
+          ]
+        },
+        {
+          "name": "Electi",
+          "aliases": [
+            "Electi",
+            "electi"
+          ]
+        },
+        {
+          "name": "The Ashfort",
+          "aliases": [
+            "The Ashfort",
+            "the ashfort",
+            "theashfort"
+          ]
+        },
+        {
+          "name": "The Calamity",
+          "aliases": [
+            "The Calamity",
+            "the calamity",
+            "thecalamity"
+          ]
+        },
+        {
+          "name": "Camp Omega",
+          "aliases": [
+            "Camp Omega",
+            "camp omega",
+            "campomega"
+          ]
+        },
+        {
+          "name": "Cometa",
+          "aliases": [
+            "Cometa",
+            "cometa"
+          ]
+        },
+        {
+          "name": "Sootflow",
+          "aliases": [
+            "Sootflow",
+            "sootflow"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Basin Sionnach",
+      "aliases": [
+        "Basin Sionnach",
+        "Basin Sionnach Hex",
+        "Basin Sionnach Region",
+        "basin sionnach",
+        "basinsionnach",
+        "Cuttail Station",
+        "The Den",
+        "Sess",
+        "Basinhome",
+        "Lamplight",
+        "Stoic",
+        "cuttail station",
+        "the den",
+        "sess",
+        "basinhome",
+        "lamplight",
+        "stoic"
+      ],
+      "regions": [
+        {
+          "name": "Cuttail Station",
+          "aliases": [
+            "Cuttail Station",
+            "cuttail station",
+            "cuttailstation"
+          ]
+        },
+        {
+          "name": "The Den",
+          "aliases": [
+            "The Den",
+            "the den",
+            "theden"
+          ]
+        },
+        {
+          "name": "Sess",
+          "aliases": [
+            "Sess",
+            "sess"
+          ]
+        },
+        {
+          "name": "Basinhome",
+          "aliases": [
+            "Basinhome",
+            "basinhome"
+          ]
+        },
+        {
+          "name": "Lamplight",
+          "aliases": [
+            "Lamplight",
+            "lamplight"
+          ]
+        },
+        {
+          "name": "Stoic",
+          "aliases": [
+            "Stoic",
+            "stoic"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Callahan's Passage",
+      "aliases": [
+        "Callahan's Passage",
+        "Callahan's Passage Hex",
+        "Callahan's Passage Region",
+        "callahans passage",
+        "callahanspassage",
+        "Lochan Berth",
+        "Cragstown",
+        "Crumbling Post",
+        "The Latch",
+        "Overlook Hill",
+        "Solas Gorge",
+        "White Chapel",
+        "The Crumbling Passage",
+        "The Procession",
+        "Scáth Passing",
+        "cragstown",
+        "crumbling post",
+        "the latch",
+        "lochan berth",
+        "overlook hill",
+        "solas gorge",
+        "white chapel",
+        "the crumbling passage",
+        "the procession",
+        "scath passing"
+      ],
+      "regions": [
+        {
+          "name": "Cragstown",
+          "aliases": [
+            "Cragstown",
+            "cragstown"
+          ]
+        },
+        {
+          "name": "Crumbling Post",
+          "aliases": [
+            "Crumbling Post",
+            "crumbling post",
+            "crumblingpost"
+          ]
+        },
+        {
+          "name": "The Latch",
+          "aliases": [
+            "The Latch",
+            "the latch",
+            "thelatch"
+          ]
+        },
+        {
+          "name": "Lochan Berth",
+          "aliases": [
+            "Lochan Berth",
+            "lochan berth",
+            "lochanberth"
+          ]
+        },
+        {
+          "name": "Overlook Hill",
+          "aliases": [
+            "Overlook Hill",
+            "overlook hill",
+            "overlookhill"
+          ]
+        },
+        {
+          "name": "Solas Gorge",
+          "aliases": [
+            "Solas Gorge",
+            "solas gorge",
+            "solasgorge"
+          ]
+        },
+        {
+          "name": "White Chapel",
+          "aliases": [
+            "White Chapel",
+            "white chapel",
+            "whitechapel"
+          ]
+        },
+        {
+          "name": "The Crumbling Passage",
+          "aliases": [
+            "The Crumbling Passage",
+            "the crumbling passage",
+            "thecrumblingpassage"
+          ]
+        },
+        {
+          "name": "The Procession",
+          "aliases": [
+            "The Procession",
+            "the procession",
+            "theprocession"
+          ]
+        },
+        {
+          "name": "Scáth Passing",
+          "aliases": [
+            "Scáth Passing",
+            "scath passing",
+            "scathpassing"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Callum's Cape",
+      "aliases": [
+        "Callum's Cape",
+        "Callum's Cape Hex",
+        "Callum's Cape Region"
+      ],
+      "regions": [
+        {
+          "name": "Callum's Keep",
+          "aliases": [
+            "Callum's Keep",
+            "callums keep",
+            "callumskeep",
+            "Callums Keep"
+          ]
+        },
+        {
+          "name": "Holdout",
+          "aliases": [
+            "Holdout",
+            "holdout"
+          ]
+        },
+        {
+          "name": "Camp Hollow",
+          "aliases": [
+            "Camp Hollow",
+            "camp hollow",
+            "camphollow"
+          ]
+        },
+        {
+          "name": "Ire",
+          "aliases": [
+            "Ire",
+            "ire"
+          ]
+        },
+        {
+          "name": "Lookout",
+          "aliases": [
+            "Lookout",
+            "lookout"
+          ]
+        },
+        {
+          "name": "Naofa",
+          "aliases": [
+            "Naofa",
+            "naofa"
+          ]
+        },
+        {
+          "name": "Scouts Jest",
+          "aliases": [
+            "Scouts Jest",
+            "scouts jest",
+            "scoutsjest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Clanshead Valley",
+      "aliases": [
+        "Clanshead Valley",
+        "Clanshead Valley Hex",
+        "Clanshead Valley Region"
+      ],
+      "regions": [
+        {
+          "name": "The King",
+          "aliases": [
+            "The King",
+            "the king",
+            "theking"
+          ]
+        },
+        {
+          "name": "The Pike",
+          "aliases": [
+            "The Pike",
+            "the pike",
+            "thepike"
+          ]
+        },
+        {
+          "name": "Fallen Crown",
+          "aliases": [
+            "Fallen Crown",
+            "fallen crown",
+            "fallencrown"
+          ]
+        },
+        {
+          "name": "Fort Ealar",
+          "aliases": [
+            "Fort Ealar",
+            "fort ealar",
+            "fortealar"
+          ]
+        },
+        {
+          "name": "Fort Esterwild",
+          "aliases": [
+            "Fort Esterwild",
+            "fort esterwild",
+            "fortesterwild"
+          ]
+        },
+        {
+          "name": "Fort Windham",
+          "aliases": [
+            "Fort Windham",
+            "fort windham",
+            "fortwindham"
+          ]
+        },
+        {
+          "name": "Sweetholt",
+          "aliases": [
+            "Sweetholt",
+            "sweetholt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Deadlands",
+      "aliases": [
+        "Deadlands",
+        "Deadlands Hex",
+        "Deadlands Region",
+        "deadlands",
+        "Abandoned Ward",
+        "Brine Glen",
+        "Callahan's Boot",
+        "Callahan's Gate",
+        "Liberation Point",
+        "The Salt Farms",
+        "The Spine",
+        "Iron's End",
+        "The Pits",
+        "The Salt March",
+        "Sun's Hollow",
+        "abandoned ward",
+        "brine glen",
+        "callahans boot",
+        "callahans gate",
+        "liberation point",
+        "the salt farms",
+        "the spine",
+        "irons end",
+        "the pits",
+        "the salt march",
+        "suns hollow"
+      ],
+      "regions": [
+        {
+          "name": "Abandoned Ward",
+          "aliases": [
+            "Abandoned Ward",
+            "abandoned ward",
+            "abandonedward"
+          ]
+        },
+        {
+          "name": "Brine Glen",
+          "aliases": [
+            "Brine Glen",
+            "brine glen",
+            "brineglen"
+          ]
+        },
+        {
+          "name": "Callahan's Boot",
+          "aliases": [
+            "Callahan's Boot",
+            "callahans boot",
+            "callahansboot",
+            "Callahans Boot"
+          ]
+        },
+        {
+          "name": "Callahan's Gate",
+          "aliases": [
+            "Callahan's Gate",
+            "callahans gate",
+            "callahansgate",
+            "Callahans Gate"
+          ]
+        },
+        {
+          "name": "Liberation Point",
+          "aliases": [
+            "Liberation Point",
+            "liberation point",
+            "liberationpoint"
+          ]
+        },
+        {
+          "name": "The Salt Farms",
+          "aliases": [
+            "The Salt Farms",
+            "the salt farms",
+            "thesaltfarms"
+          ]
+        },
+        {
+          "name": "The Spine",
+          "aliases": [
+            "The Spine",
+            "the spine",
+            "thespine"
+          ]
+        },
+        {
+          "name": "Iron's End",
+          "aliases": [
+            "Iron's End",
+            "irons end",
+            "ironsend",
+            "Irons End"
+          ]
+        },
+        {
+          "name": "The Pits",
+          "aliases": [
+            "The Pits",
+            "the pits",
+            "thepits"
+          ]
+        },
+        {
+          "name": "The Salt March",
+          "aliases": [
+            "The Salt March",
+            "the salt march",
+            "thesaltmarch"
+          ]
+        },
+        {
+          "name": "Sun's Hollow",
+          "aliases": [
+            "Sun's Hollow",
+            "suns hollow",
+            "sunshollow",
+            "Suns Hollow"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Endless Shore",
+      "aliases": [
+        "Endless Shore",
+        "Endless Shore Hex",
+        "Endless Shore Region",
+        "endless shore",
+        "endlessshore",
+        "Saltbrook Channel",
+        "Brackish Point",
+        "Enduring Wake",
+        "Iron Junction",
+        "Tuatha Watchpost",
+        "Wellchurch",
+        "Woodbind",
+        "The Old Jack Tar",
+        "The Overland",
+        "Sídhe Fall",
+        "The Evil Eye",
+        "brackish point",
+        "enduring wake",
+        "iron junction",
+        "saltbrook channel",
+        "tuatha watchpost",
+        "wellchurch",
+        "woodbind",
+        "the old jack tar",
+        "the overland",
+        "sidhe fall",
+        "the evil eye"
+      ],
+      "regions": [
+        {
+          "name": "Brackish Point",
+          "aliases": [
+            "Brackish Point",
+            "brackish point",
+            "brackishpoint"
+          ]
+        },
+        {
+          "name": "Enduring Wake",
+          "aliases": [
+            "Enduring Wake",
+            "enduring wake",
+            "enduringwake"
+          ]
+        },
+        {
+          "name": "Iron Junction",
+          "aliases": [
+            "Iron Junction",
+            "iron junction",
+            "ironjunction"
+          ]
+        },
+        {
+          "name": "Saltbrook Channel",
+          "aliases": [
+            "Saltbrook Channel",
+            "saltbrook channel",
+            "saltbrookchannel"
+          ]
+        },
+        {
+          "name": "Tuatha Watchpost",
+          "aliases": [
+            "Tuatha Watchpost",
+            "tuatha watchpost",
+            "tuathawatchpost"
+          ]
+        },
+        {
+          "name": "Wellchurch",
+          "aliases": [
+            "Wellchurch",
+            "wellchurch"
+          ]
+        },
+        {
+          "name": "Woodbind",
+          "aliases": [
+            "Woodbind",
+            "woodbind"
+          ]
+        },
+        {
+          "name": "The Old Jack Tar",
+          "aliases": [
+            "The Old Jack Tar",
+            "the old jack tar",
+            "theoldjacktar"
+          ]
+        },
+        {
+          "name": "The Overland",
+          "aliases": [
+            "The Overland",
+            "the overland",
+            "theoverland"
+          ]
+        },
+        {
+          "name": "Sídhe Fall",
+          "aliases": [
+            "Sídhe Fall",
+            "sidhe fall",
+            "sidhefall"
+          ]
+        },
+        {
+          "name": "The Evil Eye",
+          "aliases": [
+            "The Evil Eye",
+            "the evil eye",
+            "theevileye"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Farranac Coast",
+      "aliases": [
+        "Farranac Coast",
+        "Farranac Coast Hex",
+        "Farranac Coast Region",
+        "farranac coast",
+        "farranaccoast",
+        "The Jade Cove",
+        "The Bone Haft",
+        "Huskhollow",
+        "Macha's Keening",
+        "Mara",
+        "Victa",
+        "Pleading Wharf",
+        "Scarp of Ambrose",
+        "Scythe",
+        "Terra",
+        "Transient Valley",
+        "the bone haft",
+        "huskhollow",
+        "the jade cove",
+        "machas keening",
+        "mara",
+        "victa",
+        "pleading wharf",
+        "scarp of ambrose",
+        "scythe",
+        "terra",
+        "transient valley"
+      ],
+      "regions": [
+        {
+          "name": "The Bone Haft",
+          "aliases": [
+            "The Bone Haft",
+            "the bone haft",
+            "thebonehaft"
+          ]
+        },
+        {
+          "name": "Huskhollow",
+          "aliases": [
+            "Huskhollow",
+            "huskhollow"
+          ]
+        },
+        {
+          "name": "The Jade Cove",
+          "aliases": [
+            "The Jade Cove",
+            "the jade cove",
+            "thejadecove"
+          ]
+        },
+        {
+          "name": "Macha's Keening",
+          "aliases": [
+            "Macha's Keening",
+            "machas keening",
+            "machaskeening",
+            "Machas Keening"
+          ]
+        },
+        {
+          "name": "Mara",
+          "aliases": [
+            "Mara",
+            "mara"
+          ]
+        },
+        {
+          "name": "Victa",
+          "aliases": [
+            "Victa",
+            "victa"
+          ]
+        },
+        {
+          "name": "Pleading Wharf",
+          "aliases": [
+            "Pleading Wharf",
+            "pleading wharf",
+            "pleadingwharf"
+          ]
+        },
+        {
+          "name": "Scarp of Ambrose",
+          "aliases": [
+            "Scarp of Ambrose",
+            "scarp of ambrose",
+            "scarpofambrose"
+          ]
+        },
+        {
+          "name": "Scythe",
+          "aliases": [
+            "Scythe",
+            "scythe"
+          ]
+        },
+        {
+          "name": "Terra",
+          "aliases": [
+            "Terra",
+            "terra"
+          ]
+        },
+        {
+          "name": "Transient Valley",
+          "aliases": [
+            "Transient Valley",
+            "transient valley",
+            "transientvalley"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fisherman's Row",
+      "aliases": [
+        "Fisherman's Row",
+        "Fisherman's Row Hex",
+        "Fisherman's Row Region",
+        "fishermans row",
+        "fishermansrow",
+        "Arcadia",
+        "Black Well",
+        "Eidolo",
+        "Dankana Post",
+        "Fort Ember",
+        "Hangman's Court",
+        "Oceanwatch",
+        "Peripti Landing",
+        "The Satyr Stone",
+        "arcadia",
+        "black well",
+        "eidolo",
+        "dankana post",
+        "fort ember",
+        "hangmans court",
+        "oceanwatch",
+        "peripti landing",
+        "the satyr stone"
+      ],
+      "regions": [
+        {
+          "name": "Arcadia",
+          "aliases": [
+            "Arcadia",
+            "arcadia"
+          ]
+        },
+        {
+          "name": "Black Well",
+          "aliases": [
+            "Black Well",
+            "black well",
+            "blackwell"
+          ]
+        },
+        {
+          "name": "Eidolo",
+          "aliases": [
+            "Eidolo",
+            "eidolo"
+          ]
+        },
+        {
+          "name": "Dankana Post",
+          "aliases": [
+            "Dankana Post",
+            "dankana post",
+            "dankanapost"
+          ]
+        },
+        {
+          "name": "Fort Ember",
+          "aliases": [
+            "Fort Ember",
+            "fort ember",
+            "fortember"
+          ]
+        },
+        {
+          "name": "Hangman's Court",
+          "aliases": [
+            "Hangman's Court",
+            "hangmans court",
+            "hangmanscourt",
+            "Hangmans Court"
+          ]
+        },
+        {
+          "name": "Oceanwatch",
+          "aliases": [
+            "Oceanwatch",
+            "oceanwatch"
+          ]
+        },
+        {
+          "name": "Peripti Landing",
+          "aliases": [
+            "Peripti Landing",
+            "peripti landing",
+            "periptilanding"
+          ]
+        },
+        {
+          "name": "The Satyr Stone",
+          "aliases": [
+            "The Satyr Stone",
+            "the satyr stone",
+            "thesatyrstone"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Godcrofts",
+      "aliases": [
+        "Godcrofts",
+        "Godcrofts Hex",
+        "Godcrofts Region",
+        "godcrofts",
+        "The Axehead",
+        "Isawa",
+        "Argosa",
+        "Exile",
+        "Fleecewatch",
+        "Lipsia",
+        "Protos",
+        "Saegio",
+        "Ursa Base",
+        "the axehead",
+        "isawa",
+        "argosa",
+        "exile",
+        "fleecewatch",
+        "lipsia",
+        "protos",
+        "saegio",
+        "ursa base"
+      ],
+      "regions": [
+        {
+          "name": "The Axehead",
+          "aliases": [
+            "The Axehead",
+            "the axehead",
+            "theaxehead"
+          ]
+        },
+        {
+          "name": "Isawa",
+          "aliases": [
+            "Isawa",
+            "isawa"
+          ]
+        },
+        {
+          "name": "Argosa",
+          "aliases": [
+            "Argosa",
+            "argosa"
+          ]
+        },
+        {
+          "name": "Exile",
+          "aliases": [
+            "Exile",
+            "exile"
+          ]
+        },
+        {
+          "name": "Fleecewatch",
+          "aliases": [
+            "Fleecewatch",
+            "fleecewatch"
+          ]
+        },
+        {
+          "name": "Lipsia",
+          "aliases": [
+            "Lipsia",
+            "lipsia"
+          ]
+        },
+        {
+          "name": "Protos",
+          "aliases": [
+            "Protos",
+            "protos"
+          ]
+        },
+        {
+          "name": "Saegio",
+          "aliases": [
+            "Saegio",
+            "saegio"
+          ]
+        },
+        {
+          "name": "Ursa Base",
+          "aliases": [
+            "Ursa Base",
+            "ursa base",
+            "ursabase"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Great March",
+      "aliases": [
+        "Great March",
+        "Great March Hex",
+        "Great March Region",
+        "great march",
+        "greatmarch",
+        "Sitaria",
+        "Leto",
+        "Myrmidon's Stay",
+        "Remnant Villa",
+        "The Swan",
+        "Violethome",
+        "Camp Senti",
+        "Dendró Field",
+        "Lionsfort",
+        "leto",
+        "myrmidons stay",
+        "remnant villa",
+        "sitaria",
+        "the swan",
+        "violethome",
+        "camp senti",
+        "dendro field",
+        "lionsfort"
+      ],
+      "regions": [
+        {
+          "name": "Leto",
+          "aliases": [
+            "Leto",
+            "leto"
+          ]
+        },
+        {
+          "name": "Myrmidon's Stay",
+          "aliases": [
+            "Myrmidon's Stay",
+            "myrmidons stay",
+            "myrmidonsstay",
+            "Myrmidons Stay"
+          ]
+        },
+        {
+          "name": "Remnant Villa",
+          "aliases": [
+            "Remnant Villa",
+            "remnant villa",
+            "remnantvilla"
+          ]
+        },
+        {
+          "name": "Sitaria",
+          "aliases": [
+            "Sitaria",
+            "sitaria"
+          ]
+        },
+        {
+          "name": "The Swan",
+          "aliases": [
+            "The Swan",
+            "the swan",
+            "theswan"
+          ]
+        },
+        {
+          "name": "Violethome",
+          "aliases": [
+            "Violethome",
+            "violethome"
+          ]
+        },
+        {
+          "name": "Camp Senti",
+          "aliases": [
+            "Camp Senti",
+            "camp senti",
+            "campsenti"
+          ]
+        },
+        {
+          "name": "Dendró Field",
+          "aliases": [
+            "Dendró Field",
+            "dendro field",
+            "dendrofield"
+          ]
+        },
+        {
+          "name": "Lionsfort",
+          "aliases": [
+            "Lionsfort",
+            "lionsfort"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Howl County",
+      "aliases": [
+        "Howl County",
+        "Howl County Hex",
+        "Howl County Region",
+        "howl county",
+        "howlcounty",
+        "Great Warden Dam",
+        "Hungry Wolf",
+        "Little Lamb",
+        "Teller Farm",
+        "Fort Red",
+        "Fort Rider",
+        "Sickleshire",
+        "Slipgate Outpost",
+        "great warden dam",
+        "hungry wolf",
+        "little lamb",
+        "teller farm",
+        "fort red",
+        "fort rider",
+        "sickleshire",
+        "slipgate outpost"
+      ],
+      "regions": [
+        {
+          "name": "Great Warden Dam",
+          "aliases": [
+            "Great Warden Dam",
+            "great warden dam",
+            "greatwardendam"
+          ]
+        },
+        {
+          "name": "Hungry Wolf",
+          "aliases": [
+            "Hungry Wolf",
+            "hungry wolf",
+            "hungrywolf"
+          ]
+        },
+        {
+          "name": "Little Lamb",
+          "aliases": [
+            "Little Lamb",
+            "little lamb",
+            "littlelamb"
+          ]
+        },
+        {
+          "name": "Teller Farm",
+          "aliases": [
+            "Teller Farm",
+            "teller farm",
+            "tellerfarm"
+          ]
+        },
+        {
+          "name": "Fort Red",
+          "aliases": [
+            "Fort Red",
+            "fort red",
+            "fortred"
+          ]
+        },
+        {
+          "name": "Fort Rider",
+          "aliases": [
+            "Fort Rider",
+            "fort rider",
+            "fortrider"
+          ]
+        },
+        {
+          "name": "Sickleshire",
+          "aliases": [
+            "Sickleshire",
+            "sickleshire"
+          ]
+        },
+        {
+          "name": "Slipgate Outpost",
+          "aliases": [
+            "Slipgate Outpost",
+            "slipgate outpost",
+            "slipgateoutpost"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kalokai",
+      "aliases": [
+        "Kalokai",
+        "Kalokai Hex",
+        "Kalokai Region",
+        "kalokai",
+        "Baccae Ridge",
+        "Hallow",
+        "Sweethearth",
+        "Camp Tau",
+        "Lost Greensward",
+        "Night's Regret",
+        "Sourtooth",
+        "baccae ridge",
+        "hallow",
+        "sweethearth",
+        "camp tau",
+        "lost greensward",
+        "nights regret",
+        "sourtooth"
+      ],
+      "regions": [
+        {
+          "name": "Baccae Ridge",
+          "aliases": [
+            "Baccae Ridge",
+            "baccae ridge",
+            "baccaeridge"
+          ]
+        },
+        {
+          "name": "Hallow",
+          "aliases": [
+            "Hallow",
+            "hallow"
+          ]
+        },
+        {
+          "name": "Sweethearth",
+          "aliases": [
+            "Sweethearth",
+            "sweethearth"
+          ]
+        },
+        {
+          "name": "Camp Tau",
+          "aliases": [
+            "Camp Tau",
+            "camp tau",
+            "camptau"
+          ]
+        },
+        {
+          "name": "Lost Greensward",
+          "aliases": [
+            "Lost Greensward",
+            "lost greensward",
+            "lostgreensward"
+          ]
+        },
+        {
+          "name": "Night's Regret",
+          "aliases": [
+            "Night's Regret",
+            "nights regret",
+            "nightsregret",
+            "Nights Regret"
+          ]
+        },
+        {
+          "name": "Sourtooth",
+          "aliases": [
+            "Sourtooth",
+            "sourtooth"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "King's Cage",
+      "aliases": [
+        "King's Cage",
+        "King's Cage Hex",
+        "King's Cage Region",
+        "kings cage",
+        "kingscage",
+        "The Manacle",
+        "The Bailie",
+        "Gibbet Fields",
+        "Den of Knaves",
+        "Eastknife",
+        "Scarlethold",
+        "Slipchain",
+        "Southblade",
+        "the bailie",
+        "gibbet fields",
+        "the manacle",
+        "den of knaves",
+        "eastknife",
+        "scarlethold",
+        "slipchain",
+        "southblade"
+      ],
+      "regions": [
+        {
+          "name": "The Bailie",
+          "aliases": [
+            "The Bailie",
+            "the bailie",
+            "thebailie"
+          ]
+        },
+        {
+          "name": "Gibbet Fields",
+          "aliases": [
+            "Gibbet Fields",
+            "gibbet fields",
+            "gibbetfields"
+          ]
+        },
+        {
+          "name": "The Manacle",
+          "aliases": [
+            "The Manacle",
+            "the manacle",
+            "themanacle"
+          ]
+        },
+        {
+          "name": "Den of Knaves",
+          "aliases": [
+            "Den of Knaves",
+            "den of knaves",
+            "denofknaves"
+          ]
+        },
+        {
+          "name": "Eastknife",
+          "aliases": [
+            "Eastknife",
+            "eastknife"
+          ]
+        },
+        {
+          "name": "Scarlethold",
+          "aliases": [
+            "Scarlethold",
+            "scarlethold"
+          ]
+        },
+        {
+          "name": "Slipchain",
+          "aliases": [
+            "Slipchain",
+            "slipchain"
+          ]
+        },
+        {
+          "name": "Southblade",
+          "aliases": [
+            "Southblade",
+            "southblade"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kuura Strand",
+      "aliases": [
+        "Kuura Strand",
+        "Kuura Strand Hex",
+        "Kuura Strand Region",
+        "kuura strand",
+        "kuurastrand",
+        "Suosalo",
+        "Faden Point",
+        "Martti",
+        "Talven",
+        "Lumia",
+        "Menneen",
+        "suosalo",
+        "faden point",
+        "martti",
+        "talven",
+        "lumia",
+        "menneen"
+      ],
+      "regions": [
+        {
+          "name": "Suosalo",
+          "aliases": [
+            "Suosalo",
+            "suosalo"
+          ]
+        },
+        {
+          "name": "Faden Point",
+          "aliases": [
+            "Faden Point",
+            "faden point",
+            "fadenpoint"
+          ]
+        },
+        {
+          "name": "Martti",
+          "aliases": [
+            "Martti",
+            "martti"
+          ]
+        },
+        {
+          "name": "Talven",
+          "aliases": [
+            "Talven",
+            "talven"
+          ]
+        },
+        {
+          "name": "Lumia",
+          "aliases": [
+            "Lumia",
+            "lumia"
+          ]
+        },
+        {
+          "name": "Menneen",
+          "aliases": [
+            "Menneen",
+            "menneen"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Loch Mór",
+      "aliases": [
+        "Loch Mór",
+        "Loch Mór Hex",
+        "Loch Mór Region",
+        "loch mor",
+        "lochmor",
+        "Feirmor",
+        "Mercy's Wish",
+        "Market Road",
+        "Moon's Copse",
+        "The Roilfort",
+        "Tomb of the First",
+        "Westmarch",
+        "feirmor",
+        "mercys wish",
+        "market road",
+        "moons copse",
+        "the roilfort",
+        "tomb of the first",
+        "westmarch"
+      ],
+      "regions": [
+        {
+          "name": "Feirmor",
+          "aliases": [
+            "Feirmor",
+            "feirmor"
+          ]
+        },
+        {
+          "name": "Mercy's Wish",
+          "aliases": [
+            "Mercy's Wish",
+            "mercys wish",
+            "mercyswish",
+            "Mercys Wish"
+          ]
+        },
+        {
+          "name": "Market Road",
+          "aliases": [
+            "Market Road",
+            "market road",
+            "marketroad"
+          ]
+        },
+        {
+          "name": "Moon's Copse",
+          "aliases": [
+            "Moon's Copse",
+            "moons copse",
+            "moonscopse",
+            "Moons Copse"
+          ]
+        },
+        {
+          "name": "The Roilfort",
+          "aliases": [
+            "The Roilfort",
+            "the roilfort",
+            "theroilfort"
+          ]
+        },
+        {
+          "name": "Tomb of the First",
+          "aliases": [
+            "Tomb of the First",
+            "tomb of the first",
+            "tombofthefirst"
+          ]
+        },
+        {
+          "name": "Westmarch",
+          "aliases": [
+            "Westmarch",
+            "westmarch"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lykos Isle",
+      "aliases": [
+        "Lykos Isle",
+        "Lykos Isle Hex",
+        "Lykos Isle Region",
+        "lykos isle",
+        "lykosisle",
+        "Cyrus",
+        "Aetherwood",
+        "The Squall",
+        "Fort Guile",
+        "Astutia",
+        "Erebus Islet",
+        "Mārudia",
+        "cyrus",
+        "aetherwood",
+        "the squall",
+        "fort guile",
+        "astutia",
+        "erebus islet",
+        "marudia"
+      ],
+      "regions": [
+        {
+          "name": "Cyrus",
+          "aliases": [
+            "Cyrus",
+            "cyrus"
+          ]
+        },
+        {
+          "name": "Aetherwood",
+          "aliases": [
+            "Aetherwood",
+            "aetherwood"
+          ]
+        },
+        {
+          "name": "The Squall",
+          "aliases": [
+            "The Squall",
+            "the squall",
+            "thesquall"
+          ]
+        },
+        {
+          "name": "Fort Guile",
+          "aliases": [
+            "Fort Guile",
+            "fort guile",
+            "fortguile"
+          ]
+        },
+        {
+          "name": "Astutia",
+          "aliases": [
+            "Astutia",
+            "astutia"
+          ]
+        },
+        {
+          "name": "Erebus Islet",
+          "aliases": [
+            "Erebus Islet",
+            "erebus islet",
+            "erebusislet"
+          ]
+        },
+        {
+          "name": "Mārudia",
+          "aliases": [
+            "Mārudia",
+            "marudia"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Marban Hollow",
+      "aliases": [
+        "Marban Hollow",
+        "Marban Hollow Hex",
+        "Marban Hollow Region",
+        "marban hollow",
+        "marbanhollow",
+        "Maiden's Veil",
+        "Lockheed",
+        "Checkpoint Bua",
+        "Mox",
+        "Oster Wall",
+        "Sanctum",
+        "The Spitrocks",
+        "lockheed",
+        "maidens veil",
+        "checkpoint bua",
+        "mox",
+        "oster wall",
+        "sanctum",
+        "the spitrocks"
+      ],
+      "regions": [
+        {
+          "name": "Lockheed",
+          "aliases": [
+            "Lockheed",
+            "lockheed"
+          ]
+        },
+        {
+          "name": "Maiden's Veil",
+          "aliases": [
+            "Maiden's Veil",
+            "maidens veil",
+            "maidensveil",
+            "Maidens Veil"
+          ]
+        },
+        {
+          "name": "Checkpoint Bua",
+          "aliases": [
+            "Checkpoint Bua",
+            "checkpoint bua",
+            "checkpointbua"
+          ]
+        },
+        {
+          "name": "Mox",
+          "aliases": [
+            "Mox",
+            "mox"
+          ]
+        },
+        {
+          "name": "Oster Wall",
+          "aliases": [
+            "Oster Wall",
+            "oster wall",
+            "osterwall"
+          ]
+        },
+        {
+          "name": "Sanctum",
+          "aliases": [
+            "Sanctum",
+            "sanctum"
+          ]
+        },
+        {
+          "name": "The Spitrocks",
+          "aliases": [
+            "The Spitrocks",
+            "the spitrocks",
+            "thespitrocks"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Morgen's Crossing",
+      "aliases": [
+        "Morgen's Crossing",
+        "Morgen's Crossing Hex",
+        "Morgen's Crossing Region",
+        "morgens crossing",
+        "morgenscrossing",
+        "Allsight",
+        "Lividus",
+        "Quietus",
+        "Bastard's Block",
+        "Callum's Descent",
+        "Eversus",
+        "allsight",
+        "lividus",
+        "quietus",
+        "bastards block",
+        "callums descent",
+        "eversus"
+      ],
+      "regions": [
+        {
+          "name": "Allsight",
+          "aliases": [
+            "Allsight",
+            "allsight"
+          ]
+        },
+        {
+          "name": "Lividus",
+          "aliases": [
+            "Lividus",
+            "lividus"
+          ]
+        },
+        {
+          "name": "Quietus",
+          "aliases": [
+            "Quietus",
+            "quietus"
+          ]
+        },
+        {
+          "name": "Bastard's Block",
+          "aliases": [
+            "Bastard's Block",
+            "bastards block",
+            "bastardsblock",
+            "Bastards Block"
+          ]
+        },
+        {
+          "name": "Callum's Descent",
+          "aliases": [
+            "Callum's Descent",
+            "callums descent",
+            "callumsdescent",
+            "Callums Descent"
+          ]
+        },
+        {
+          "name": "Eversus",
+          "aliases": [
+            "Eversus",
+            "eversus"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nevish Line",
+      "aliases": [
+        "Nevish Line",
+        "Nevish Line Hex",
+        "Nevish Line Region",
+        "nevish line",
+        "nevishline",
+        "The Scrying Belt",
+        "Blackcoat Way",
+        "Mistle Shrine",
+        "Blinding Stones",
+        "Grief Mother",
+        "Princefal",
+        "Tomb Father",
+        "Unruly",
+        "blackcoat way",
+        "mistle shrine",
+        "the scrying belt",
+        "blinding stones",
+        "grief mother",
+        "princefal",
+        "tomb father",
+        "unruly"
+      ],
+      "regions": [
+        {
+          "name": "Blackcoat Way",
+          "aliases": [
+            "Blackcoat Way",
+            "blackcoat way",
+            "blackcoatway"
+          ]
+        },
+        {
+          "name": "Mistle Shrine",
+          "aliases": [
+            "Mistle Shrine",
+            "mistle shrine",
+            "mistleshrine"
+          ]
+        },
+        {
+          "name": "The Scrying Belt",
+          "aliases": [
+            "The Scrying Belt",
+            "the scrying belt",
+            "thescryingbelt"
+          ]
+        },
+        {
+          "name": "Blinding Stones",
+          "aliases": [
+            "Blinding Stones",
+            "blinding stones",
+            "blindingstones"
+          ]
+        },
+        {
+          "name": "Grief Mother",
+          "aliases": [
+            "Grief Mother",
+            "grief mother",
+            "griefmother"
+          ]
+        },
+        {
+          "name": "Princefal",
+          "aliases": [
+            "Princefal",
+            "princefal"
+          ]
+        },
+        {
+          "name": "Tomb Father",
+          "aliases": [
+            "Tomb Father",
+            "tomb father",
+            "tombfather"
+          ]
+        },
+        {
+          "name": "Unruly",
+          "aliases": [
+            "Unruly",
+            "unruly"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Olavi's Wake",
+      "aliases": [
+        "Olavi's Wake",
+        "Olavi's Wake Hex",
+        "Olavi's Wake Region",
+        "olavis wake",
+        "olaviswake",
+        "Koskinla",
+        "Kulkue",
+        "Iltaku",
+        "Ilmari Bridge",
+        "Yöohja",
+        "koskinla",
+        "kulkue",
+        "iltaku",
+        "ilmari bridge",
+        "yoohja"
+      ],
+      "regions": [
+        {
+          "name": "Koskinla",
+          "aliases": [
+            "Koskinla",
+            "koskinla"
+          ]
+        },
+        {
+          "name": "Kulkue",
+          "aliases": [
+            "Kulkue",
+            "kulkue"
+          ]
+        },
+        {
+          "name": "Iltaku",
+          "aliases": [
+            "Iltaku",
+            "iltaku"
+          ]
+        },
+        {
+          "name": "Ilmari Bridge",
+          "aliases": [
+            "Ilmari Bridge",
+            "ilmari bridge",
+            "ilmaribridge"
+          ]
+        },
+        {
+          "name": "Yöohja",
+          "aliases": [
+            "Yöohja",
+            "yoohja"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ónyx",
+      "aliases": [
+        "Ónyx",
+        "Ónyx Hex",
+        "Ónyx Region",
+        "onyx",
+        "The Brink",
+        "Dexam",
+        "Garland",
+        "Beholder's Span",
+        "Cisterna Run",
+        "The Waif",
+        "the brink",
+        "dexam",
+        "garland",
+        "beholders span",
+        "cisterna run",
+        "the waif"
+      ],
+      "regions": [
+        {
+          "name": "The Brink",
+          "aliases": [
+            "The Brink",
+            "the brink",
+            "thebrink"
+          ]
+        },
+        {
+          "name": "Dexam",
+          "aliases": [
+            "Dexam",
+            "dexam"
+          ]
+        },
+        {
+          "name": "Garland",
+          "aliases": [
+            "Garland",
+            "garland"
+          ]
+        },
+        {
+          "name": "Beholder's Span",
+          "aliases": [
+            "Beholder's Span",
+            "beholders span",
+            "beholdersspan",
+            "Beholders Span"
+          ]
+        },
+        {
+          "name": "Cisterna Run",
+          "aliases": [
+            "Cisterna Run",
+            "cisterna run",
+            "cisternarun"
+          ]
+        },
+        {
+          "name": "The Waif",
+          "aliases": [
+            "The Waif",
+            "the waif",
+            "thewaif"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Origin",
+      "aliases": [
+        "Origin",
+        "Origin Hex",
+        "Origin Region",
+        "origin",
+        "Teichotima",
+        "Finis",
+        "Initium",
+        "Arise",
+        "Dormio",
+        "The Steel Road",
+        "World Star",
+        "finis",
+        "initium",
+        "teichotima",
+        "arise",
+        "dormio",
+        "the steel road",
+        "world star"
+      ],
+      "regions": [
+        {
+          "name": "Finis",
+          "aliases": [
+            "Finis",
+            "finis"
+          ]
+        },
+        {
+          "name": "Initium",
+          "aliases": [
+            "Initium",
+            "initium"
+          ]
+        },
+        {
+          "name": "Teichotima",
+          "aliases": [
+            "Teichotima",
+            "teichotima"
+          ]
+        },
+        {
+          "name": "Arise",
+          "aliases": [
+            "Arise",
+            "arise"
+          ]
+        },
+        {
+          "name": "Dormio",
+          "aliases": [
+            "Dormio",
+            "dormio"
+          ]
+        },
+        {
+          "name": "The Steel Road",
+          "aliases": [
+            "The Steel Road",
+            "the steel road",
+            "thesteelroad"
+          ]
+        },
+        {
+          "name": "World Star",
+          "aliases": [
+            "World Star",
+            "world star",
+            "worldstar"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Palantine Berm",
+      "aliases": [
+        "Palantine Berm",
+        "Palantine Berm Hex",
+        "Palantine Berm Region",
+        "palantine berm",
+        "palantineberm",
+        "The Droll",
+        "Vendett",
+        "Underlook",
+        "Windburn Landing",
+        "Dryfeld",
+        "The Pippeli Stones",
+        "Leiri Hermanni",
+        "the droll",
+        "vendett",
+        "underlook",
+        "windburn landing",
+        "dryfeld",
+        "the pippeli stones",
+        "leiri hermanni"
+      ],
+      "regions": [
+        {
+          "name": "The Droll",
+          "aliases": [
+            "The Droll",
+            "the droll",
+            "thedroll"
+          ]
+        },
+        {
+          "name": "Vendett",
+          "aliases": [
+            "Vendett",
+            "vendett"
+          ]
+        },
+        {
+          "name": "Underlook",
+          "aliases": [
+            "Underlook",
+            "underlook"
+          ]
+        },
+        {
+          "name": "Windburn Landing",
+          "aliases": [
+            "Windburn Landing",
+            "windburn landing",
+            "windburnlanding"
+          ]
+        },
+        {
+          "name": "Dryfeld",
+          "aliases": [
+            "Dryfeld",
+            "dryfeld"
+          ]
+        },
+        {
+          "name": "The Pippeli Stones",
+          "aliases": [
+            "The Pippeli Stones",
+            "the pippeli stones",
+            "thepippelistones"
+          ]
+        },
+        {
+          "name": "Leiri Hermanni",
+          "aliases": [
+            "Leiri Hermanni",
+            "leiri hermanni",
+            "leirihermanni"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pari Peak",
+      "aliases": [
+        "Pari Peak",
+        "Pari Peak Hex",
+        "Pari Peak Region",
+        "pari peak",
+        "paripeak",
+        "Little Raakkua",
+        "Pariah",
+        "Kohina Base",
+        "Itään",
+        "Camp Surista",
+        "little raakkua",
+        "pariah",
+        "kohina base",
+        "itaan",
+        "camp surista"
+      ],
+      "regions": [
+        {
+          "name": "Little Raakkua",
+          "aliases": [
+            "Little Raakkua",
+            "little raakkua",
+            "littleraakkua"
+          ]
+        },
+        {
+          "name": "Pariah",
+          "aliases": [
+            "Pariah",
+            "pariah"
+          ]
+        },
+        {
+          "name": "Kohina Base",
+          "aliases": [
+            "Kohina Base",
+            "kohina base",
+            "kohinabase"
+          ]
+        },
+        {
+          "name": "Itään",
+          "aliases": [
+            "Itään",
+            "itaan"
+          ]
+        },
+        {
+          "name": "Camp Surista",
+          "aliases": [
+            "Camp Surista",
+            "camp surista",
+            "campsurista"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Piper's Enclave",
+      "aliases": [
+        "Piper's Enclave",
+        "Piper's Enclave Hex",
+        "Piper's Enclave Region",
+        "pipers enclave",
+        "pipersenclave",
+        "Pan's Villa",
+        "House of Lyterius",
+        "Syrinx Pass",
+        "Reedhurst",
+        "Maenalius Cove",
+        "Aegocerus Fortress",
+        "pans villa",
+        "house of lyterius",
+        "syrinx pass",
+        "reedhurst",
+        "maenalius cove",
+        "aegocerus fortress"
+      ],
+      "regions": [
+        {
+          "name": "Pan's Villa",
+          "aliases": [
+            "Pan's Villa",
+            "pans villa",
+            "pansvilla",
+            "Pans Villa"
+          ]
+        },
+        {
+          "name": "House of Lyterius",
+          "aliases": [
+            "House of Lyterius",
+            "house of lyterius",
+            "houseoflyterius"
+          ]
+        },
+        {
+          "name": "Syrinx Pass",
+          "aliases": [
+            "Syrinx Pass",
+            "syrinx pass",
+            "syrinxpass"
+          ]
+        },
+        {
+          "name": "Reedhurst",
+          "aliases": [
+            "Reedhurst",
+            "reedhurst"
+          ]
+        },
+        {
+          "name": "Maenalius Cove",
+          "aliases": [
+            "Maenalius Cove",
+            "maenalius cove",
+            "maenaliuscove"
+          ]
+        },
+        {
+          "name": "Aegocerus Fortress",
+          "aliases": [
+            "Aegocerus Fortress",
+            "aegocerus fortress",
+            "aegocerusfortress"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reaching Trail",
+      "aliases": [
+        "Reaching Trail",
+        "Reaching Trail Hex",
+        "Reaching Trail Region",
+        "reaching trail",
+        "reachingtrail",
+        "Brodytown",
+        "Dwyerstown",
+        "Elksford",
+        "Ice Ranch",
+        "Mousetrap",
+        "Nightchurch",
+        "Reprieve",
+        "The Ark",
+        "Fort Mac Conaill",
+        "Harpy",
+        "Limestone Holdfast",
+        "brodytown",
+        "dwyerstown",
+        "elksford",
+        "ice ranch",
+        "mousetrap",
+        "nightchurch",
+        "reprieve",
+        "the ark",
+        "fort mac conaill",
+        "harpy",
+        "limestone holdfast"
+      ],
+      "regions": [
+        {
+          "name": "Brodytown",
+          "aliases": [
+            "Brodytown",
+            "brodytown"
+          ]
+        },
+        {
+          "name": "Dwyerstown",
+          "aliases": [
+            "Dwyerstown",
+            "dwyerstown"
+          ]
+        },
+        {
+          "name": "Elksford",
+          "aliases": [
+            "Elksford",
+            "elksford"
+          ]
+        },
+        {
+          "name": "Ice Ranch",
+          "aliases": [
+            "Ice Ranch",
+            "ice ranch",
+            "iceranch"
+          ]
+        },
+        {
+          "name": "Mousetrap",
+          "aliases": [
+            "Mousetrap",
+            "mousetrap"
+          ]
+        },
+        {
+          "name": "Nightchurch",
+          "aliases": [
+            "Nightchurch",
+            "nightchurch"
+          ]
+        },
+        {
+          "name": "Reprieve",
+          "aliases": [
+            "Reprieve",
+            "reprieve"
+          ]
+        },
+        {
+          "name": "The Ark",
+          "aliases": [
+            "The Ark",
+            "the ark",
+            "theark"
+          ]
+        },
+        {
+          "name": "Fort Mac Conaill",
+          "aliases": [
+            "Fort Mac Conaill",
+            "fort mac conaill",
+            "fortmacconaill"
+          ]
+        },
+        {
+          "name": "Harpy",
+          "aliases": [
+            "Harpy",
+            "harpy"
+          ]
+        },
+        {
+          "name": "Limestone Holdfast",
+          "aliases": [
+            "Limestone Holdfast",
+            "limestone holdfast",
+            "limestoneholdfast"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reaver's Pass",
+      "aliases": [
+        "Reaver's Pass",
+        "Reaver's Pass Hex",
+        "Reaver's Pass Region",
+        "reavers pass",
+        "reaverspass",
+        "Keelhaul",
+        "Breakwater",
+        "Scuttletown",
+        "The Bilge",
+        "Clay Coffer",
+        "Fort Rictus",
+        "Thimble Base",
+        "breakwater",
+        "keelhaul",
+        "scuttletown",
+        "the bilge",
+        "clay coffer",
+        "fort rictus",
+        "thimble base"
+      ],
+      "regions": [
+        {
+          "name": "Breakwater",
+          "aliases": [
+            "Breakwater",
+            "breakwater"
+          ]
+        },
+        {
+          "name": "Keelhaul",
+          "aliases": [
+            "Keelhaul",
+            "keelhaul"
+          ]
+        },
+        {
+          "name": "Scuttletown",
+          "aliases": [
+            "Scuttletown",
+            "scuttletown"
+          ]
+        },
+        {
+          "name": "The Bilge",
+          "aliases": [
+            "The Bilge",
+            "the bilge",
+            "thebilge"
+          ]
+        },
+        {
+          "name": "Clay Coffer",
+          "aliases": [
+            "Clay Coffer",
+            "clay coffer",
+            "claycoffer"
+          ]
+        },
+        {
+          "name": "Fort Rictus",
+          "aliases": [
+            "Fort Rictus",
+            "fort rictus",
+            "fortrictus"
+          ]
+        },
+        {
+          "name": "Thimble Base",
+          "aliases": [
+            "Thimble Base",
+            "thimble base",
+            "thimblebase"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Red River",
+      "aliases": [
+        "Red River",
+        "Red River Hex",
+        "Red River Region",
+        "red river",
+        "redriver",
+        "Cannonsmoke",
+        "Judicium",
+        "Minos",
+        "Penance",
+        "Camp Upsilon",
+        "Climb",
+        "Fort Matchwood",
+        "Victoria Hill",
+        "cannonsmoke",
+        "judicium",
+        "minos",
+        "penance",
+        "camp upsilon",
+        "climb",
+        "fort matchwood",
+        "victoria hill"
+      ],
+      "regions": [
+        {
+          "name": "Cannonsmoke",
+          "aliases": [
+            "Cannonsmoke",
+            "cannonsmoke"
+          ]
+        },
+        {
+          "name": "Judicium",
+          "aliases": [
+            "Judicium",
+            "judicium"
+          ]
+        },
+        {
+          "name": "Minos",
+          "aliases": [
+            "Minos",
+            "minos"
+          ]
+        },
+        {
+          "name": "Penance",
+          "aliases": [
+            "Penance",
+            "penance"
+          ]
+        },
+        {
+          "name": "Camp Upsilon",
+          "aliases": [
+            "Camp Upsilon",
+            "camp upsilon",
+            "campupsilon"
+          ]
+        },
+        {
+          "name": "Climb",
+          "aliases": [
+            "Climb",
+            "climb"
+          ]
+        },
+        {
+          "name": "Fort Matchwood",
+          "aliases": [
+            "Fort Matchwood",
+            "fort matchwood",
+            "fortmatchwood"
+          ]
+        },
+        {
+          "name": "Victoria Hill",
+          "aliases": [
+            "Victoria Hill",
+            "victoria hill",
+            "victoriahill"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sableport",
+      "aliases": [
+        "Sableport",
+        "Sableport Hex",
+        "Sableport Region",
+        "sableport",
+        "Barronhome",
+        "Cinderwick",
+        "Light's End",
+        "The Pendant",
+        "The Robin's Nest",
+        "Talonsfort",
+        "The Whetstone",
+        "barronhome",
+        "cinderwick",
+        "lights end",
+        "the pendant",
+        "the robins nest",
+        "talonsfort",
+        "the whetstone"
+      ],
+      "regions": [
+        {
+          "name": "Barronhome",
+          "aliases": [
+            "Barronhome",
+            "barronhome"
+          ]
+        },
+        {
+          "name": "Cinderwick",
+          "aliases": [
+            "Cinderwick",
+            "cinderwick"
+          ]
+        },
+        {
+          "name": "Light's End",
+          "aliases": [
+            "Light's End",
+            "lights end",
+            "lightsend",
+            "Lights End"
+          ]
+        },
+        {
+          "name": "The Pendant",
+          "aliases": [
+            "The Pendant",
+            "the pendant",
+            "thependant"
+          ]
+        },
+        {
+          "name": "The Robin's Nest",
+          "aliases": [
+            "The Robin's Nest",
+            "the robins nest",
+            "therobinsnest",
+            "The Robins Nest"
+          ]
+        },
+        {
+          "name": "Talonsfort",
+          "aliases": [
+            "Talonsfort",
+            "talonsfort"
+          ]
+        },
+        {
+          "name": "The Whetstone",
+          "aliases": [
+            "The Whetstone",
+            "the whetstone",
+            "thewhetstone"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shackled Chasm",
+      "aliases": [
+        "Shackled Chasm",
+        "Shackled Chasm Hex",
+        "Shackled Chasm Region",
+        "shackled chasm",
+        "shackledchasm",
+        "Silk Farms",
+        "The Grave of Erastos",
+        "Reflection",
+        "Savages",
+        "The Vanguard",
+        "The Bell Toll",
+        "Firstmarch",
+        "Gorgon Grove",
+        "Limewood Holdfast",
+        "Simo's Run",
+        "the grave of erastos",
+        "reflection",
+        "savages",
+        "silk farms",
+        "the vanguard",
+        "the bell toll",
+        "firstmarch",
+        "gorgon grove",
+        "limewood holdfast",
+        "simos run"
+      ],
+      "regions": [
+        {
+          "name": "The Grave of Erastos",
+          "aliases": [
+            "The Grave of Erastos",
+            "the grave of erastos",
+            "thegraveoferastos"
+          ]
+        },
+        {
+          "name": "Reflection",
+          "aliases": [
+            "Reflection",
+            "reflection"
+          ]
+        },
+        {
+          "name": "Savages",
+          "aliases": [
+            "Savages",
+            "savages"
+          ]
+        },
+        {
+          "name": "Silk Farms",
+          "aliases": [
+            "Silk Farms",
+            "silk farms",
+            "silkfarms"
+          ]
+        },
+        {
+          "name": "The Vanguard",
+          "aliases": [
+            "The Vanguard",
+            "the vanguard",
+            "thevanguard"
+          ]
+        },
+        {
+          "name": "The Bell Toll",
+          "aliases": [
+            "The Bell Toll",
+            "the bell toll",
+            "thebelltoll"
+          ]
+        },
+        {
+          "name": "Firstmarch",
+          "aliases": [
+            "Firstmarch",
+            "firstmarch"
+          ]
+        },
+        {
+          "name": "Gorgon Grove",
+          "aliases": [
+            "Gorgon Grove",
+            "gorgon grove",
+            "gorgongrove"
+          ]
+        },
+        {
+          "name": "Limewood Holdfast",
+          "aliases": [
+            "Limewood Holdfast",
+            "limewood holdfast",
+            "limewoodholdfast"
+          ]
+        },
+        {
+          "name": "Simo's Run",
+          "aliases": [
+            "Simo's Run",
+            "simos run",
+            "simosrun",
+            "Simos Run"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Speaking Woods",
+      "aliases": [
+        "Speaking Woods",
+        "Speaking Woods Hex",
+        "Speaking Woods Region",
+        "speaking woods",
+        "speakingwoods",
+        "Tine",
+        "The Filament",
+        "Sotto Bank",
+        "Fort Blather",
+        "Hush",
+        "Inari Base",
+        "Stem",
+        "Wound",
+        "the filament",
+        "sotto bank",
+        "tine",
+        "fort blather",
+        "hush",
+        "inari base",
+        "stem",
+        "wound"
+      ],
+      "regions": [
+        {
+          "name": "The Filament",
+          "aliases": [
+            "The Filament",
+            "the filament",
+            "thefilament"
+          ]
+        },
+        {
+          "name": "Sotto Bank",
+          "aliases": [
+            "Sotto Bank",
+            "sotto bank",
+            "sottobank"
+          ]
+        },
+        {
+          "name": "Tine",
+          "aliases": [
+            "Tine",
+            "tine"
+          ]
+        },
+        {
+          "name": "Fort Blather",
+          "aliases": [
+            "Fort Blather",
+            "fort blather",
+            "fortblather"
+          ]
+        },
+        {
+          "name": "Hush",
+          "aliases": [
+            "Hush",
+            "hush"
+          ]
+        },
+        {
+          "name": "Inari Base",
+          "aliases": [
+            "Inari Base",
+            "inari base",
+            "inaribase"
+          ]
+        },
+        {
+          "name": "Stem",
+          "aliases": [
+            "Stem",
+            "stem"
+          ]
+        },
+        {
+          "name": "Wound",
+          "aliases": [
+            "Wound",
+            "wound"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stema Landing",
+      "aliases": [
+        "Stema Landing",
+        "Stema Landing Hex",
+        "Stema Landing Region",
+        "stema landing",
+        "stemalanding",
+        "Alchimio Estate",
+        "The Spearhead",
+        "Acies Overlook",
+        "Base Ferveret",
+        "Base Sagitta",
+        "The Flair",
+        "Ustio",
+        "Verge Wing",
+        "The Wane",
+        "alchimio estate",
+        "the spearhead",
+        "acies overlook",
+        "base ferveret",
+        "base sagitta",
+        "the flair",
+        "ustio",
+        "verge wing",
+        "the wane"
+      ],
+      "regions": [
+        {
+          "name": "Alchimio Estate",
+          "aliases": [
+            "Alchimio Estate",
+            "alchimio estate",
+            "alchimioestate"
+          ]
+        },
+        {
+          "name": "The Spearhead",
+          "aliases": [
+            "The Spearhead",
+            "the spearhead",
+            "thespearhead"
+          ]
+        },
+        {
+          "name": "Acies Overlook",
+          "aliases": [
+            "Acies Overlook",
+            "acies overlook",
+            "aciesoverlook"
+          ]
+        },
+        {
+          "name": "Base Ferveret",
+          "aliases": [
+            "Base Ferveret",
+            "base ferveret",
+            "baseferveret"
+          ]
+        },
+        {
+          "name": "Base Sagitta",
+          "aliases": [
+            "Base Sagitta",
+            "base sagitta",
+            "basesagitta"
+          ]
+        },
+        {
+          "name": "The Flair",
+          "aliases": [
+            "The Flair",
+            "the flair",
+            "theflair"
+          ]
+        },
+        {
+          "name": "Ustio",
+          "aliases": [
+            "Ustio",
+            "ustio"
+          ]
+        },
+        {
+          "name": "Verge Wing",
+          "aliases": [
+            "Verge Wing",
+            "verge wing",
+            "vergewing"
+          ]
+        },
+        {
+          "name": "The Wane",
+          "aliases": [
+            "The Wane",
+            "the wane",
+            "thewane"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stlican Shelf",
+      "aliases": [
+        "Stlican Shelf",
+        "Stlican Shelf Hex",
+        "Stlican Shelf Region",
+        "stlican shelf",
+        "stlicanshelf",
+        "Port of Rime",
+        "Breaker Town",
+        "The Pale House",
+        "Vulpine Watch",
+        "Briar",
+        "Fort Hoarfrost",
+        "The Old Mourn",
+        "The South Wind",
+        "Thornhold",
+        "breaker town",
+        "the pale house",
+        "port of rime",
+        "vulpine watch",
+        "briar",
+        "fort hoarfrost",
+        "the old mourn",
+        "the south wind",
+        "thornhold"
+      ],
+      "regions": [
+        {
+          "name": "Breaker Town",
+          "aliases": [
+            "Breaker Town",
+            "breaker town",
+            "breakertown"
+          ]
+        },
+        {
+          "name": "The Pale House",
+          "aliases": [
+            "The Pale House",
+            "the pale house",
+            "thepalehouse"
+          ]
+        },
+        {
+          "name": "Port of Rime",
+          "aliases": [
+            "Port of Rime",
+            "port of rime",
+            "portofrime"
+          ]
+        },
+        {
+          "name": "Vulpine Watch",
+          "aliases": [
+            "Vulpine Watch",
+            "vulpine watch",
+            "vulpinewatch"
+          ]
+        },
+        {
+          "name": "Briar",
+          "aliases": [
+            "Briar",
+            "briar"
+          ]
+        },
+        {
+          "name": "Fort Hoarfrost",
+          "aliases": [
+            "Fort Hoarfrost",
+            "fort hoarfrost",
+            "forthoarfrost"
+          ]
+        },
+        {
+          "name": "The Old Mourn",
+          "aliases": [
+            "The Old Mourn",
+            "the old mourn",
+            "theoldmourn"
+          ]
+        },
+        {
+          "name": "The South Wind",
+          "aliases": [
+            "The South Wind",
+            "the south wind",
+            "thesouthwind"
+          ]
+        },
+        {
+          "name": "Thornhold",
+          "aliases": [
+            "Thornhold",
+            "thornhold"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stonecradle",
+      "aliases": [
+        "Stonecradle",
+        "Stonecradle Hex",
+        "Stonecradle Region",
+        "stonecradle",
+        "Buckler Sound",
+        "Fading Lights",
+        "The Cord",
+        "The Dais",
+        "The Heir's Knife",
+        "The Long Fast",
+        "The Reach",
+        "Trammel Pool",
+        "World's End",
+        "buckler sound",
+        "fading lights",
+        "the cord",
+        "the dais",
+        "the heirs knife",
+        "the long fast",
+        "the reach",
+        "trammel pool",
+        "worlds end"
+      ],
+      "regions": [
+        {
+          "name": "Buckler Sound",
+          "aliases": [
+            "Buckler Sound",
+            "buckler sound",
+            "bucklersound"
+          ]
+        },
+        {
+          "name": "Fading Lights",
+          "aliases": [
+            "Fading Lights",
+            "fading lights",
+            "fadinglights"
+          ]
+        },
+        {
+          "name": "The Cord",
+          "aliases": [
+            "The Cord",
+            "the cord",
+            "thecord"
+          ]
+        },
+        {
+          "name": "The Dais",
+          "aliases": [
+            "The Dais",
+            "the dais",
+            "thedais"
+          ]
+        },
+        {
+          "name": "The Heir's Knife",
+          "aliases": [
+            "The Heir's Knife",
+            "the heirs knife",
+            "theheirsknife",
+            "The Heirs Knife"
+          ]
+        },
+        {
+          "name": "The Long Fast",
+          "aliases": [
+            "The Long Fast",
+            "the long fast",
+            "thelongfast"
+          ]
+        },
+        {
+          "name": "The Reach",
+          "aliases": [
+            "The Reach",
+            "the reach",
+            "thereach"
+          ]
+        },
+        {
+          "name": "Trammel Pool",
+          "aliases": [
+            "Trammel Pool",
+            "trammel pool",
+            "trammelpool"
+          ]
+        },
+        {
+          "name": "World's End",
+          "aliases": [
+            "World's End",
+            "worlds end",
+            "worldsend",
+            "Worlds End"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tempest Island",
+      "aliases": [
+        "Tempest Island",
+        "Tempest Island Hex",
+        "Tempest Island Region",
+        "tempest island",
+        "tempestisland",
+        "The Iris",
+        "Liar's Haven",
+        "Plana Fada",
+        "The Rush",
+        "Surge Gate",
+        "Blackwatch",
+        "The Gale",
+        "Isle of Psyche",
+        "Reef",
+        "the iris",
+        "liars haven",
+        "plana fada",
+        "the rush",
+        "surge gate",
+        "blackwatch",
+        "the gale",
+        "isle of psyche",
+        "reef"
+      ],
+      "regions": [
+        {
+          "name": "The Iris",
+          "aliases": [
+            "The Iris",
+            "the iris",
+            "theiris"
+          ]
+        },
+        {
+          "name": "Liar's Haven",
+          "aliases": [
+            "Liar's Haven",
+            "liars haven",
+            "liarshaven",
+            "Liars Haven"
+          ]
+        },
+        {
+          "name": "Plana Fada",
+          "aliases": [
+            "Plana Fada",
+            "plana fada",
+            "planafada"
+          ]
+        },
+        {
+          "name": "The Rush",
+          "aliases": [
+            "The Rush",
+            "the rush",
+            "therush"
+          ]
+        },
+        {
+          "name": "Surge Gate",
+          "aliases": [
+            "Surge Gate",
+            "surge gate",
+            "surgegate"
+          ]
+        },
+        {
+          "name": "Blackwatch",
+          "aliases": [
+            "Blackwatch",
+            "blackwatch"
+          ]
+        },
+        {
+          "name": "The Gale",
+          "aliases": [
+            "The Gale",
+            "the gale",
+            "thegale"
+          ]
+        },
+        {
+          "name": "Isle of Psyche",
+          "aliases": [
+            "Isle of Psyche",
+            "isle of psyche",
+            "isleofpsyche"
+          ]
+        },
+        {
+          "name": "Reef",
+          "aliases": [
+            "Reef",
+            "reef"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Terminus",
+      "aliases": [
+        "Terminus",
+        "Terminus Hex",
+        "Terminus Region",
+        "terminus",
+        "Therizó",
+        "Warlord's Stead",
+        "Bloody Palm Fort",
+        "Cerberus Wake",
+        "Thunderbolt",
+        "Winding Bolas",
+        "therizo",
+        "warlords stead",
+        "bloody palm fort",
+        "cerberus wake",
+        "thunderbolt",
+        "winding bolas"
+      ],
+      "regions": [
+        {
+          "name": "Therizó",
+          "aliases": [
+            "Therizó",
+            "therizo"
+          ]
+        },
+        {
+          "name": "Warlord's Stead",
+          "aliases": [
+            "Warlord's Stead",
+            "warlords stead",
+            "warlordsstead",
+            "Warlords Stead"
+          ]
+        },
+        {
+          "name": "Bloody Palm Fort",
+          "aliases": [
+            "Bloody Palm Fort",
+            "bloody palm fort",
+            "bloodypalmfort"
+          ]
+        },
+        {
+          "name": "Cerberus Wake",
+          "aliases": [
+            "Cerberus Wake",
+            "cerberus wake",
+            "cerberuswake"
+          ]
+        },
+        {
+          "name": "Thunderbolt",
+          "aliases": [
+            "Thunderbolt",
+            "thunderbolt"
+          ]
+        },
+        {
+          "name": "Winding Bolas",
+          "aliases": [
+            "Winding Bolas",
+            "winding bolas",
+            "windingbolas"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Clahstra",
+      "aliases": [
+        "The Clahstra",
+        "The Clahstra Hex",
+        "The Clahstra Region",
+        "the clahstra",
+        "theclahstra",
+        "The Treasury",
+        "East Narthex",
+        "Third Chapter",
+        "Watchful Nave",
+        "Bewailing Fort",
+        "Transept",
+        "The Vault",
+        "Weephome",
+        "east narthex",
+        "third chapter",
+        "the treasury",
+        "watchful nave",
+        "bewailing fort",
+        "transept",
+        "the vault",
+        "weephome"
+      ],
+      "regions": [
+        {
+          "name": "East Narthex",
+          "aliases": [
+            "East Narthex",
+            "east narthex",
+            "eastnarthex"
+          ]
+        },
+        {
+          "name": "Third Chapter",
+          "aliases": [
+            "Third Chapter",
+            "third chapter",
+            "thirdchapter"
+          ]
+        },
+        {
+          "name": "The Treasury",
+          "aliases": [
+            "The Treasury",
+            "the treasury",
+            "thetreasury"
+          ]
+        },
+        {
+          "name": "Watchful Nave",
+          "aliases": [
+            "Watchful Nave",
+            "watchful nave",
+            "watchfulnave"
+          ]
+        },
+        {
+          "name": "Bewailing Fort",
+          "aliases": [
+            "Bewailing Fort",
+            "bewailing fort",
+            "bewailingfort"
+          ]
+        },
+        {
+          "name": "Transept",
+          "aliases": [
+            "Transept",
+            "transept"
+          ]
+        },
+        {
+          "name": "The Vault",
+          "aliases": [
+            "The Vault",
+            "the vault",
+            "thevault"
+          ]
+        },
+        {
+          "name": "Weephome",
+          "aliases": [
+            "Weephome",
+            "weephome"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Drowned Vale",
+      "aliases": [
+        "The Drowned Vale",
+        "The Drowned Vale Hex",
+        "The Drowned Vale Region",
+        "the drowned vale",
+        "thedrownedvale",
+        "The Baths",
+        "Bootnap",
+        "Coaldrifter Stead",
+        "Loggerhead",
+        "The Saltcaps",
+        "Vessel",
+        "Eastmarch",
+        "Singing Serpents",
+        "Splinter Pens",
+        "The Wash",
+        "Wisp's Warning",
+        "the baths",
+        "bootnap",
+        "coaldrifter stead",
+        "loggerhead",
+        "the saltcaps",
+        "vessel",
+        "eastmarch",
+        "singing serpents",
+        "splinter pens",
+        "the wash",
+        "wisps warning"
+      ],
+      "regions": [
+        {
+          "name": "The Baths",
+          "aliases": [
+            "The Baths",
+            "the baths",
+            "thebaths"
+          ]
+        },
+        {
+          "name": "Bootnap",
+          "aliases": [
+            "Bootnap",
+            "bootnap"
+          ]
+        },
+        {
+          "name": "Coaldrifter Stead",
+          "aliases": [
+            "Coaldrifter Stead",
+            "coaldrifter stead",
+            "coaldrifterstead"
+          ]
+        },
+        {
+          "name": "Loggerhead",
+          "aliases": [
+            "Loggerhead",
+            "loggerhead"
+          ]
+        },
+        {
+          "name": "The Saltcaps",
+          "aliases": [
+            "The Saltcaps",
+            "the saltcaps",
+            "thesaltcaps"
+          ]
+        },
+        {
+          "name": "Vessel",
+          "aliases": [
+            "Vessel",
+            "vessel"
+          ]
+        },
+        {
+          "name": "Eastmarch",
+          "aliases": [
+            "Eastmarch",
+            "eastmarch"
+          ]
+        },
+        {
+          "name": "Singing Serpents",
+          "aliases": [
+            "Singing Serpents",
+            "singing serpents",
+            "singingserpents"
+          ]
+        },
+        {
+          "name": "Splinter Pens",
+          "aliases": [
+            "Splinter Pens",
+            "splinter pens",
+            "splinterpens"
+          ]
+        },
+        {
+          "name": "The Wash",
+          "aliases": [
+            "The Wash",
+            "the wash",
+            "thewash"
+          ]
+        },
+        {
+          "name": "Wisp's Warning",
+          "aliases": [
+            "Wisp's Warning",
+            "wisps warning",
+            "wispswarning",
+            "Wisps Warning"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Fingers",
+      "aliases": [
+        "The Fingers",
+        "The Fingers Hex",
+        "The Fingers Region",
+        "the fingers",
+        "thefingers",
+        "Headsman's Villa",
+        "The Old Captain",
+        "Fort Barley",
+        "Plankhouse",
+        "Second Man",
+        "Tethys Base",
+        "Titancall",
+        "headsmans villa",
+        "the old captain",
+        "fort barley",
+        "plankhouse",
+        "second man",
+        "tethys base",
+        "titancall"
+      ],
+      "regions": [
+        {
+          "name": "Headsman's Villa",
+          "aliases": [
+            "Headsman's Villa",
+            "headsmans villa",
+            "headsmansvilla",
+            "Headsmans Villa"
+          ]
+        },
+        {
+          "name": "The Old Captain",
+          "aliases": [
+            "The Old Captain",
+            "the old captain",
+            "theoldcaptain"
+          ]
+        },
+        {
+          "name": "Fort Barley",
+          "aliases": [
+            "Fort Barley",
+            "fort barley",
+            "fortbarley"
+          ]
+        },
+        {
+          "name": "Plankhouse",
+          "aliases": [
+            "Plankhouse",
+            "plankhouse"
+          ]
+        },
+        {
+          "name": "Second Man",
+          "aliases": [
+            "Second Man",
+            "second man",
+            "secondman"
+          ]
+        },
+        {
+          "name": "Tethys Base",
+          "aliases": [
+            "Tethys Base",
+            "tethys base",
+            "tethysbase"
+          ]
+        },
+        {
+          "name": "Titancall",
+          "aliases": [
+            "Titancall",
+            "titancall"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Gutter",
+      "aliases": [
+        "The Gutter",
+        "The Gutter Hex",
+        "The Gutter Region",
+        "the gutter",
+        "thegutter",
+        "Kuoppa",
+        "The Parras",
+        "Rotko Camp",
+        "Suojus",
+        "Rikki Sarana",
+        "Lost Kaivo",
+        "Salaoja Road",
+        "kuoppa",
+        "the parras",
+        "rotko camp",
+        "suojus",
+        "rikki sarana",
+        "lost kaivo",
+        "salaoja road"
+      ],
+      "regions": [
+        {
+          "name": "Kuoppa",
+          "aliases": [
+            "Kuoppa",
+            "kuoppa"
+          ]
+        },
+        {
+          "name": "The Parras",
+          "aliases": [
+            "The Parras",
+            "the parras",
+            "theparras"
+          ]
+        },
+        {
+          "name": "Rotko Camp",
+          "aliases": [
+            "Rotko Camp",
+            "rotko camp",
+            "rotkocamp"
+          ]
+        },
+        {
+          "name": "Suojus",
+          "aliases": [
+            "Suojus",
+            "suojus"
+          ]
+        },
+        {
+          "name": "Rikki Sarana",
+          "aliases": [
+            "Rikki Sarana",
+            "rikki sarana",
+            "rikkisarana"
+          ]
+        },
+        {
+          "name": "Lost Kaivo",
+          "aliases": [
+            "Lost Kaivo",
+            "lost kaivo",
+            "lostkaivo"
+          ]
+        },
+        {
+          "name": "Salaoja Road",
+          "aliases": [
+            "Salaoja Road",
+            "salaoja road",
+            "salaojaroad"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Heartlands",
+      "aliases": [
+        "The Heartlands",
+        "The Heartlands Hex",
+        "The Heartlands Region",
+        "the heartlands",
+        "theheartlands",
+        "The Blemish",
+        "The Breach",
+        "Deeplaw Post",
+        "Greenfield Orchard",
+        "Oleander Homestead",
+        "Proexí",
+        "Barronswall",
+        "Barrony Ranch",
+        "Fort Providence",
+        "The Plough",
+        "the blemish",
+        "the breach",
+        "deeplaw post",
+        "greenfield orchard",
+        "oleander homestead",
+        "proexi",
+        "barronswall",
+        "barrony ranch",
+        "fort providence",
+        "the plough"
+      ],
+      "regions": [
+        {
+          "name": "The Blemish",
+          "aliases": [
+            "The Blemish",
+            "the blemish",
+            "theblemish"
+          ]
+        },
+        {
+          "name": "The Breach",
+          "aliases": [
+            "The Breach",
+            "the breach",
+            "thebreach"
+          ]
+        },
+        {
+          "name": "Deeplaw Post",
+          "aliases": [
+            "Deeplaw Post",
+            "deeplaw post",
+            "deeplawpost"
+          ]
+        },
+        {
+          "name": "Greenfield Orchard",
+          "aliases": [
+            "Greenfield Orchard",
+            "greenfield orchard",
+            "greenfieldorchard"
+          ]
+        },
+        {
+          "name": "Oleander Homestead",
+          "aliases": [
+            "Oleander Homestead",
+            "oleander homestead",
+            "oleanderhomestead"
+          ]
+        },
+        {
+          "name": "Proexí",
+          "aliases": [
+            "Proexí",
+            "proexi"
+          ]
+        },
+        {
+          "name": "Barronswall",
+          "aliases": [
+            "Barronswall",
+            "barronswall"
+          ]
+        },
+        {
+          "name": "Barrony Ranch",
+          "aliases": [
+            "Barrony Ranch",
+            "barrony ranch",
+            "barronyranch"
+          ]
+        },
+        {
+          "name": "Fort Providence",
+          "aliases": [
+            "Fort Providence",
+            "fort providence",
+            "fortprovidence"
+          ]
+        },
+        {
+          "name": "The Plough",
+          "aliases": [
+            "The Plough",
+            "the plough",
+            "theplough"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Linn of Mercy",
+      "aliases": [
+        "The Linn of Mercy",
+        "The Linn of Mercy Hex",
+        "The Linn of Mercy Region",
+        "the linn of mercy",
+        "thelinnofmercy",
+        "Ulster Falls",
+        "The Crimson Gardens",
+        "The First Coin",
+        "The Long Whine",
+        "Outwich Ranch",
+        "The Prairie Bazaar",
+        "Rotdust",
+        "Fort Duncan",
+        "Hardline",
+        "The Last Grove",
+        "Lathair",
+        "the crimson gardens",
+        "the first coin",
+        "the long whine",
+        "outwich ranch",
+        "the prairie bazaar",
+        "rotdust",
+        "ulster falls",
+        "fort duncan",
+        "hardline",
+        "the last grove",
+        "lathair"
+      ],
+      "regions": [
+        {
+          "name": "The Crimson Gardens",
+          "aliases": [
+            "The Crimson Gardens",
+            "the crimson gardens",
+            "thecrimsongardens"
+          ]
+        },
+        {
+          "name": "The First Coin",
+          "aliases": [
+            "The First Coin",
+            "the first coin",
+            "thefirstcoin"
+          ]
+        },
+        {
+          "name": "The Long Whine",
+          "aliases": [
+            "The Long Whine",
+            "the long whine",
+            "thelongwhine"
+          ]
+        },
+        {
+          "name": "Outwich Ranch",
+          "aliases": [
+            "Outwich Ranch",
+            "outwich ranch",
+            "outwichranch"
+          ]
+        },
+        {
+          "name": "The Prairie Bazaar",
+          "aliases": [
+            "The Prairie Bazaar",
+            "the prairie bazaar",
+            "theprairiebazaar"
+          ]
+        },
+        {
+          "name": "Rotdust",
+          "aliases": [
+            "Rotdust",
+            "rotdust"
+          ]
+        },
+        {
+          "name": "Ulster Falls",
+          "aliases": [
+            "Ulster Falls",
+            "ulster falls",
+            "ulsterfalls"
+          ]
+        },
+        {
+          "name": "Fort Duncan",
+          "aliases": [
+            "Fort Duncan",
+            "fort duncan",
+            "fortduncan"
+          ]
+        },
+        {
+          "name": "Hardline",
+          "aliases": [
+            "Hardline",
+            "hardline"
+          ]
+        },
+        {
+          "name": "The Last Grove",
+          "aliases": [
+            "The Last Grove",
+            "the last grove",
+            "thelastgrove"
+          ]
+        },
+        {
+          "name": "Lathair",
+          "aliases": [
+            "Lathair",
+            "lathair"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Moors",
+      "aliases": [
+        "The Moors",
+        "The Moors Hex",
+        "The Moors Region",
+        "the moors",
+        "themoors",
+        "Ogmaran",
+        "The Cut",
+        "Headstone",
+        "Luch's Workshop",
+        "MacConmara Barrows",
+        "Morrighan's Grave",
+        "Borderlane",
+        "Gravekeeper's Holdfast",
+        "Reaching River",
+        "The Spade",
+        "Wiccwalk",
+        "The Wind Hills",
+        "the cut",
+        "headstone",
+        "luchs workshop",
+        "macconmara barrows",
+        "morrighans grave",
+        "ogmaran",
+        "borderlane",
+        "gravekeepers holdfast",
+        "reaching river",
+        "the spade",
+        "wiccwalk",
+        "the wind hills"
+      ],
+      "regions": [
+        {
+          "name": "The Cut",
+          "aliases": [
+            "The Cut",
+            "the cut",
+            "thecut"
+          ]
+        },
+        {
+          "name": "Headstone",
+          "aliases": [
+            "Headstone",
+            "headstone"
+          ]
+        },
+        {
+          "name": "Luch's Workshop",
+          "aliases": [
+            "Luch's Workshop",
+            "luchs workshop",
+            "luchsworkshop",
+            "Luchs Workshop"
+          ]
+        },
+        {
+          "name": "MacConmara Barrows",
+          "aliases": [
+            "MacConmara Barrows",
+            "macconmara barrows",
+            "macconmarabarrows"
+          ]
+        },
+        {
+          "name": "Morrighan's Grave",
+          "aliases": [
+            "Morrighan's Grave",
+            "morrighans grave",
+            "morrighansgrave",
+            "Morrighans Grave"
+          ]
+        },
+        {
+          "name": "Ogmaran",
+          "aliases": [
+            "Ogmaran",
+            "ogmaran"
+          ]
+        },
+        {
+          "name": "Borderlane",
+          "aliases": [
+            "Borderlane",
+            "borderlane"
+          ]
+        },
+        {
+          "name": "Gravekeeper's Holdfast",
+          "aliases": [
+            "Gravekeeper's Holdfast",
+            "gravekeepers holdfast",
+            "gravekeepersholdfast",
+            "Gravekeepers Holdfast"
+          ]
+        },
+        {
+          "name": "Reaching River",
+          "aliases": [
+            "Reaching River",
+            "reaching river",
+            "reachingriver"
+          ]
+        },
+        {
+          "name": "The Spade",
+          "aliases": [
+            "The Spade",
+            "the spade",
+            "thespade"
+          ]
+        },
+        {
+          "name": "Wiccwalk",
+          "aliases": [
+            "Wiccwalk",
+            "wiccwalk"
+          ]
+        },
+        {
+          "name": "The Wind Hills",
+          "aliases": [
+            "The Wind Hills",
+            "the wind hills",
+            "thewindhills"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "The Oarbreaker Isles",
+      "aliases": [
+        "The Oarbreaker Isles",
+        "The Oarbreaker Isles Hex",
+        "The Oarbreaker Isles Region",
+        "the oarbreaker isles",
+        "theoarbreakerisles",
+        "The Conclave",
+        "Integrum",
+        "The Dirk",
+        "Fort Fogwood",
+        "Gold",
+        "Grisly Refuge",
+        "Partisan Island",
+        "Posterus",
+        "Silver",
+        "the conclave",
+        "integrum",
+        "the dirk",
+        "fort fogwood",
+        "gold",
+        "grisly refuge",
+        "partisan island",
+        "posterus",
+        "silver"
+      ],
+      "regions": [
+        {
+          "name": "The Conclave",
+          "aliases": [
+            "The Conclave",
+            "the conclave",
+            "theconclave"
+          ]
+        },
+        {
+          "name": "Integrum",
+          "aliases": [
+            "Integrum",
+            "integrum"
+          ]
+        },
+        {
+          "name": "The Dirk",
+          "aliases": [
+            "The Dirk",
+            "the dirk",
+            "thedirk"
+          ]
+        },
+        {
+          "name": "Fort Fogwood",
+          "aliases": [
+            "Fort Fogwood",
+            "fort fogwood",
+            "fortfogwood"
+          ]
+        },
+        {
+          "name": "Gold",
+          "aliases": [
+            "Gold",
+            "gold"
+          ]
+        },
+        {
+          "name": "Grisly Refuge",
+          "aliases": [
+            "Grisly Refuge",
+            "grisly refuge",
+            "grislyrefuge"
+          ]
+        },
+        {
+          "name": "Partisan Island",
+          "aliases": [
+            "Partisan Island",
+            "partisan island",
+            "partisanisland"
+          ]
+        },
+        {
+          "name": "Posterus",
+          "aliases": [
+            "Posterus",
+            "posterus"
+          ]
+        },
+        {
+          "name": "Silver",
+          "aliases": [
+            "Silver",
+            "silver"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tyrant Foothills",
+      "aliases": [
+        "Tyrant Foothills",
+        "Tyrant Foothills Hex",
+        "Tyrant Foothills Region",
+        "tyrant foothills",
+        "tyrantfoothills",
+        "Lugria",
+        "Azmar",
+        "Duelist's Scarp",
+        "Northern Sky Hold",
+        "Bandolier Base",
+        "Onioncap",
+        "Scrapegrace",
+        "lugria",
+        "azmar",
+        "duelists scarp",
+        "northern sky hold",
+        "bandolier base",
+        "onioncap",
+        "scrapegrace"
+      ],
+      "regions": [
+        {
+          "name": "Lugria",
+          "aliases": [
+            "Lugria",
+            "lugria"
+          ]
+        },
+        {
+          "name": "Azmar",
+          "aliases": [
+            "Azmar",
+            "azmar"
+          ]
+        },
+        {
+          "name": "Duelist's Scarp",
+          "aliases": [
+            "Duelist's Scarp",
+            "duelists scarp",
+            "duelistsscarp",
+            "Duelists Scarp"
+          ]
+        },
+        {
+          "name": "Northern Sky Hold",
+          "aliases": [
+            "Northern Sky Hold",
+            "northern sky hold",
+            "northernskyhold"
+          ]
+        },
+        {
+          "name": "Bandolier Base",
+          "aliases": [
+            "Bandolier Base",
+            "bandolier base",
+            "bandolierbase"
+          ]
+        },
+        {
+          "name": "Onioncap",
+          "aliases": [
+            "Onioncap",
+            "onioncap"
+          ]
+        },
+        {
+          "name": "Scrapegrace",
+          "aliases": [
+            "Scrapegrace",
+            "scrapegrace"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Umbral Wildwood",
+      "aliases": [
+        "Umbral Wildwood",
+        "Umbral Wildwood Hex",
+        "Umbral Wildwood Region",
+        "umbral wildwood",
+        "umbralwildwood",
+        "Hermit's Rest",
+        "Amethyst",
+        "The Foundry",
+        "Sentry",
+        "Stray",
+        "Thunderfoot",
+        "Atropos' Fate",
+        "Clotho's Refuge",
+        "Goldenroot Ranch",
+        "Lachesis' Tally",
+        "Vagrant Bastion",
+        "amethyst",
+        "the foundry",
+        "hermits rest",
+        "sentry",
+        "stray",
+        "thunderfoot",
+        "atropos fate",
+        "clothos refuge",
+        "goldenroot ranch",
+        "lachesis tally",
+        "vagrant bastion"
+      ],
+      "regions": [
+        {
+          "name": "Amethyst",
+          "aliases": [
+            "Amethyst",
+            "amethyst"
+          ]
+        },
+        {
+          "name": "The Foundry",
+          "aliases": [
+            "The Foundry",
+            "the foundry",
+            "thefoundry"
+          ]
+        },
+        {
+          "name": "Hermit's Rest",
+          "aliases": [
+            "Hermit's Rest",
+            "hermits rest",
+            "hermitsrest",
+            "Hermits Rest"
+          ]
+        },
+        {
+          "name": "Sentry",
+          "aliases": [
+            "Sentry",
+            "sentry"
+          ]
+        },
+        {
+          "name": "Stray",
+          "aliases": [
+            "Stray",
+            "stray"
+          ]
+        },
+        {
+          "name": "Thunderfoot",
+          "aliases": [
+            "Thunderfoot",
+            "thunderfoot"
+          ]
+        },
+        {
+          "name": "Atropos' Fate",
+          "aliases": [
+            "Atropos' Fate",
+            "atropos fate",
+            "atroposfate",
+            "Atropos Fate"
+          ]
+        },
+        {
+          "name": "Clotho's Refuge",
+          "aliases": [
+            "Clotho's Refuge",
+            "clothos refuge",
+            "clothosrefuge",
+            "Clothos Refuge"
+          ]
+        },
+        {
+          "name": "Goldenroot Ranch",
+          "aliases": [
+            "Goldenroot Ranch",
+            "goldenroot ranch",
+            "goldenrootranch"
+          ]
+        },
+        {
+          "name": "Lachesis' Tally",
+          "aliases": [
+            "Lachesis' Tally",
+            "lachesis tally",
+            "lachesistally",
+            "Lachesis Tally"
+          ]
+        },
+        {
+          "name": "Vagrant Bastion",
+          "aliases": [
+            "Vagrant Bastion",
+            "vagrant bastion",
+            "vagrantbastion"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Viper Pit",
+      "aliases": [
+        "Viper Pit",
+        "Viper Pit Hex",
+        "Viper Pit Region",
+        "viper pit",
+        "viperpit",
+        "Kirknell",
+        "Blackthroat",
+        "Earl Crowley",
+        "Moltworth",
+        "Serenity's Blight",
+        "Fleck Crossing",
+        "Fort Viper",
+        "The Friars",
+        "blackthroat",
+        "earl crowley",
+        "kirknell",
+        "moltworth",
+        "serenitys blight",
+        "fleck crossing",
+        "fort viper",
+        "the friars"
+      ],
+      "regions": [
+        {
+          "name": "Blackthroat",
+          "aliases": [
+            "Blackthroat",
+            "blackthroat"
+          ]
+        },
+        {
+          "name": "Earl Crowley",
+          "aliases": [
+            "Earl Crowley",
+            "earl crowley",
+            "earlcrowley"
+          ]
+        },
+        {
+          "name": "Kirknell",
+          "aliases": [
+            "Kirknell",
+            "kirknell"
+          ]
+        },
+        {
+          "name": "Moltworth",
+          "aliases": [
+            "Moltworth",
+            "moltworth"
+          ]
+        },
+        {
+          "name": "Serenity's Blight",
+          "aliases": [
+            "Serenity's Blight",
+            "serenitys blight",
+            "serenitysblight",
+            "Serenitys Blight"
+          ]
+        },
+        {
+          "name": "Fleck Crossing",
+          "aliases": [
+            "Fleck Crossing",
+            "fleck crossing",
+            "fleckcrossing"
+          ]
+        },
+        {
+          "name": "Fort Viper",
+          "aliases": [
+            "Fort Viper",
+            "fort viper",
+            "fortviper"
+          ]
+        },
+        {
+          "name": "The Friars",
+          "aliases": [
+            "The Friars",
+            "the friars",
+            "thefriars"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Weathered Expanse",
+      "aliases": [
+        "Weathered Expanse",
+        "Weathered Expanse Hex",
+        "Weathered Expanse Region",
+        "weathered expanse",
+        "weatheredexpanse",
+        "The Weathering Halls",
+        "Crow's Nest",
+        "Foxcatcher",
+        "Wightwalk",
+        "Frostmarch",
+        "Huntsfort",
+        "Necropolis",
+        "Shattered Advance",
+        "Spirit Watch",
+        "crows nest",
+        "foxcatcher",
+        "the weathering halls",
+        "wightwalk",
+        "frostmarch",
+        "huntsfort",
+        "necropolis",
+        "shattered advance",
+        "spirit watch"
+      ],
+      "regions": [
+        {
+          "name": "Crow's Nest",
+          "aliases": [
+            "Crow's Nest",
+            "crows nest",
+            "crowsnest",
+            "Crows Nest"
+          ]
+        },
+        {
+          "name": "Foxcatcher",
+          "aliases": [
+            "Foxcatcher",
+            "foxcatcher"
+          ]
+        },
+        {
+          "name": "The Weathering Halls",
+          "aliases": [
+            "The Weathering Halls",
+            "the weathering halls",
+            "theweatheringhalls"
+          ]
+        },
+        {
+          "name": "Wightwalk",
+          "aliases": [
+            "Wightwalk",
+            "wightwalk"
+          ]
+        },
+        {
+          "name": "Frostmarch",
+          "aliases": [
+            "Frostmarch",
+            "frostmarch"
+          ]
+        },
+        {
+          "name": "Huntsfort",
+          "aliases": [
+            "Huntsfort",
+            "huntsfort"
+          ]
+        },
+        {
+          "name": "Necropolis",
+          "aliases": [
+            "Necropolis",
+            "necropolis"
+          ]
+        },
+        {
+          "name": "Shattered Advance",
+          "aliases": [
+            "Shattered Advance",
+            "shattered advance",
+            "shatteredadvance"
+          ]
+        },
+        {
+          "name": "Spirit Watch",
+          "aliases": [
+            "Spirit Watch",
+            "spirit watch",
+            "spiritwatch"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Westgate",
+      "aliases": [
+        "Westgate",
+        "Westgate Hex",
+        "Westgate Region",
+        "westgate",
+        "Longstone",
+        "The Gallows",
+        "Kingstone",
+        "Lord's Mouth",
+        "Holdfast",
+        "Lost Partition",
+        "Rancher's Fast",
+        "Westgate Keep",
+        "Wyattwick",
+        "Zeus' Demise",
+        "the gallows",
+        "kingstone",
+        "longstone",
+        "lords mouth",
+        "holdfast",
+        "lost partition",
+        "ranchers fast",
+        "westgate keep",
+        "wyattwick",
+        "zeus demise"
+      ],
+      "regions": [
+        {
+          "name": "The Gallows",
+          "aliases": [
+            "The Gallows",
+            "the gallows",
+            "thegallows"
+          ]
+        },
+        {
+          "name": "Kingstone",
+          "aliases": [
+            "Kingstone",
+            "kingstone"
+          ]
+        },
+        {
+          "name": "Longstone",
+          "aliases": [
+            "Longstone",
+            "longstone"
+          ]
+        },
+        {
+          "name": "Lord's Mouth",
+          "aliases": [
+            "Lord's Mouth",
+            "lords mouth",
+            "lordsmouth",
+            "Lords Mouth"
+          ]
+        },
+        {
+          "name": "Holdfast",
+          "aliases": [
+            "Holdfast",
+            "holdfast"
+          ]
+        },
+        {
+          "name": "Lost Partition",
+          "aliases": [
+            "Lost Partition",
+            "lost partition",
+            "lostpartition"
+          ]
+        },
+        {
+          "name": "Rancher's Fast",
+          "aliases": [
+            "Rancher's Fast",
+            "ranchers fast",
+            "ranchersfast",
+            "Ranchers Fast"
+          ]
+        },
+        {
+          "name": "Westgate Keep",
+          "aliases": [
+            "Westgate Keep",
+            "westgate keep",
+            "westgatekeep"
+          ]
+        },
+        {
+          "name": "Wyattwick",
+          "aliases": [
+            "Wyattwick",
+            "wyattwick"
+          ]
+        },
+        {
+          "name": "Zeus' Demise",
+          "aliases": [
+            "Zeus' Demise",
+            "zeus demise",
+            "zeusdemise",
+            "Zeus Demise"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Wresta",
+      "aliases": [
+        "Wresta",
+        "Wresta Hex",
+        "Wresta Region",
+        "wresta",
+        "Adripio",
+        "Scallyhold",
+        "Latro Manor",
+        "Argan Isle",
+        "Garion Slip",
+        "Ratchet",
+        "Toad's Plinth",
+        "adripio",
+        "scallyhold",
+        "latro manor",
+        "argan isle",
+        "garion slip",
+        "ratchet",
+        "toads plinth"
+      ],
+      "regions": [
+        {
+          "name": "Adripio",
+          "aliases": [
+            "Adripio",
+            "adripio"
+          ]
+        },
+        {
+          "name": "Scallyhold",
+          "aliases": [
+            "Scallyhold",
+            "scallyhold"
+          ]
+        },
+        {
+          "name": "Latro Manor",
+          "aliases": [
+            "Latro Manor",
+            "latro manor",
+            "latromanor"
+          ]
+        },
+        {
+          "name": "Argan Isle",
+          "aliases": [
+            "Argan Isle",
+            "argan isle",
+            "arganisle"
+          ]
+        },
+        {
+          "name": "Garion Slip",
+          "aliases": [
+            "Garion Slip",
+            "garion slip",
+            "garionslip"
+          ]
+        },
+        {
+          "name": "Ratchet",
+          "aliases": [
+            "Ratchet",
+            "ratchet"
+          ]
+        },
+        {
+          "name": "Toad's Plinth",
+          "aliases": [
+            "Toad's Plinth",
+            "toads plinth",
+            "toadsplinth",
+            "Toads Plinth"
+          ]
+        }
+      ]
+    }
+  ]
+}

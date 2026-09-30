@@ -6,10 +6,12 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
   PermissionFlagsBits,
+  ChannelType,
 } = require('discord.js');
 const { getConfig } = require('../utils/config');
 
@@ -20,6 +22,41 @@ const DEFAULT_TIME_ZONE           = 'Europe/Amsterdam';
 const REMINDER_MS                 = 15 * 60 * 1000;
 const MAX_TIMEOUT_MS              = 2 ** 31 - 1;
 const reminderTimers              = new Map();
+const QUALIFICATIONS = [
+  { key: 'scout_plane', name: 'Qualified - Scout Plane', threshold: 3 },
+  { key: 'fighter_plane', name: 'Qualified - Fighter Plane', threshold: 3, closed: true },
+  { key: 'dive_bomber', name: 'Qualified - Dive Bomber', threshold: 3, closed: true },
+  { key: 'paratrooper', name: 'Qualified - Paratrooper', threshold: 2, closed: true },
+  { key: 'heavy_bomber', name: 'Qualified - Heavy Bomber', threshold: 4, closed: true },
+  { key: 'tank_driver', name: 'Qualified - Tank Driver', threshold: 2 },
+  { key: 'tank_gunner', name: 'Qualified - Tank Gunner', threshold: 2 },
+  { key: 'heavy_tank', name: 'Qualified - Heavy Tank', threshold: 4 },
+  { key: 'small_vessel', name: 'Qualified - Small Vessel', threshold: 3 },
+  { key: 'large_vessel', name: 'Qualified - Large Vessel', threshold: 6, closed: true },
+  { key: 'logistics', name: 'Qualified - Logistics', threshold: 2 },
+  { key: 'facility_engineer', name: 'Qualified - Facility Engineer', threshold: 2 },
+  { key: 'facility_worker', name: 'Qualified - Facility Worker', threshold: 2 },
+  { key: 'artillery_spotter', name: 'Qualified - Artillery Spotter', threshold: 3 },
+];
+const QUALIFICATION_BY_KEY = new Map(QUALIFICATIONS.map(qualification => [qualification.key, qualification]));
+const TRAINER_ROLE_ID = '1552000664912142447';
+const TRAINING_REQUEST_THRESHOLD = 1;
+const QUALIFICATION_ROLE_IDS = {
+  scout_plane: '1475394015859048539',
+  fighter_plane: '1523003566099267686',
+  dive_bomber: '1484967015138594896',
+  paratrooper: '1475394242628030637',
+  heavy_bomber: '1485001900569919498',
+  tank_driver: '1475394319404892220',
+  tank_gunner: '1475430629066801214',
+  heavy_tank: '1485002146142228652',
+  small_vessel: '1475430659387293698',
+  large_vessel: '1475430703050002544',
+  logistics: '1475430732938612848',
+  facility_engineer: '1475430778325434542',
+  facility_worker: '1475431764976730144',
+  artillery_spotter: '1475430814756900965',
+};
 
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
@@ -251,6 +288,201 @@ function formatDateTimeForInput(time, timeZone = DEFAULT_TIME_ZONE) {
   return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute}`;
 }
 
+function buildQualificationEmbed(board, guild) {
+  return new EmbedBuilder()
+    .setColor(0xF39C12)
+    .setTitle('🎓  HUSS Qualification Training')
+    .setDescription(
+      '## How it works\n' +
+      'Choose every qualification you want training for. You can change your choices at any time.\n\n' +
+      '## When enough members sign up\n' +
+      'A private discussion thread will open automatically so the selected members can agree on a date and time.\n\n' +
+      '## Available qualifications'
+    )
+    .addFields(
+      QUALIFICATIONS.map(qualification => {
+        const signups = board.signups[qualification.key] ?? [];
+        const threadStatus = board.threads[qualification.key] ? ' • thread opened' : '';
+        const status = qualification.closed
+          ? '**CLOSED**'
+          : `\`${signups.length} signed up\`${threadStatus}`;
+        const roleId = QUALIFICATION_ROLE_IDS[qualification.key];
+        return {
+          name: '\u200b',
+          value: `${roleId ? `<@&${roleId}>` : qualification.name} ${status}`,
+          inline: false,
+        };
+      })
+    )
+    .setFooter({ text: '⚔️ HUSS Command  •  Select a qualification below' })
+    .setTimestamp(board.createdAt);
+}
+
+function buildQualificationRows(msgId) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`tr_choose_qualifications:${msgId}`)
+        .setLabel('Manage my applications')
+        .setEmoji('✅')
+        .setStyle(ButtonStyle.Primary)
+    ),
+  ];
+}
+
+function buildPersonalQualificationRows(msgId, board, userId) {
+  const selectedKeys = new Set(
+    QUALIFICATIONS
+      .filter(qualification => (board.signups[qualification.key] ?? []).some(member => member.id === userId))
+      .map(qualification => qualification.key)
+  );
+
+  return [new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`tr_manage_qualifications:${msgId}`)
+      .setPlaceholder('Update my qualifications')
+      .setMinValues(0)
+      .setMaxValues(QUALIFICATIONS.length)
+      .addOptions(QUALIFICATIONS.map(qualification => ({
+        label: qualification.name.replace('Qualified - ', ''),
+        description: qualification.closed ? 'Currently closed' : 'Request training for this qualification',
+        value: qualification.key,
+        default: selectedKeys.has(qualification.key),
+        disabled: qualification.closed,
+      })))
+  )];
+}
+
+async function refreshQualificationBoard(interaction, board, msgId) {
+  const channel = interaction.guild.channels.cache.get(board.channelId)
+    ?? await interaction.guild.channels.fetch(board.channelId).catch(() => null);
+  if (!channel) return;
+  const msg = await channel.messages.fetch(msgId).catch(() => null);
+  if (msg) {
+    await msg.edit({
+      embeds: [buildQualificationEmbed(board, interaction.guild)],
+      components: buildQualificationRows(msgId),
+      allowedMentions: {
+        roles: QUALIFICATIONS
+          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .filter(Boolean),
+      },
+    }).catch(() => {});
+  }
+}
+
+async function refreshStoredQualificationBoards(client) {
+  const store = readStore();
+  for (const [guildId, trainings] of Object.entries(store.guilds)) {
+    const guild = client.guilds.cache.get(guildId)
+      ?? await client.guilds.fetch(guildId).catch(() => null);
+    if (!guild) continue;
+
+    for (const [msgId, board] of Object.entries(trainings)) {
+      if (board.type !== 'qualification-board') continue;
+
+      const channel = guild.channels.cache.get(board.channelId)
+        ?? await guild.channels.fetch(board.channelId).catch(() => null);
+      if (!channel || !channel.isTextBased()) continue;
+
+      const message = await channel.messages.fetch(msgId).catch(() => null);
+      if (!message) continue;
+
+      await message.edit({
+        embeds: [buildQualificationEmbed(board, guild)],
+        components: buildQualificationRows(msgId),
+        allowedMentions: {
+          roles: QUALIFICATIONS
+            .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+            .filter(Boolean),
+        },
+      }).catch(error => {
+        console.error(`Could not refresh qualification board ${msgId}:`, error);
+      });
+    }
+  }
+}
+
+async function openQualificationThread(interaction, board, qualification) {
+  if (board.threads[qualification.key]) return;
+
+  const channel = interaction.guild.channels.cache.get(board.channelId)
+    ?? await interaction.guild.channels.fetch(board.channelId).catch(() => null);
+  if (!channel) return;
+
+  const thread = await channel.threads.create({
+    name: qualification.name.slice(0, 100),
+    type: ChannelType.PrivateThread,
+    autoArchiveDuration: 10080,
+    reason: `Qualification training discussion for ${qualification.name}`,
+  }).catch(() => null);
+  if (!thread) return;
+
+  const signups = board.signups[qualification.key] ?? [];
+  const userIds = signups.map(member => member.id);
+  board.threads[qualification.key] = thread.id;
+
+  for (const userId of userIds) {
+    await thread.members.add(userId).catch(error => {
+      console.error(`Could not add ${userId} to qualification thread ${thread.id}:`, error);
+    });
+  }
+
+  await thread.send({
+    content:
+      `# ${qualification.name}\n\n` +
+      `## Training group ready\n` +
+      `🎓 Training has been requested by \`${signups.length}\` member${signups.length === 1 ? '' : 's'}.\n\n` +
+      `## Next step\n` +
+      `Please use this thread to agree on a date and time.\n\n` +
+      `Need help or want to get a trainer's attention? Ping <@&${TRAINER_ROLE_ID}>.\n\n` +
+      `## Members\n${userIds.map(id => `<@${id}>`).join(' ')}`,
+    allowedMentions: { users: userIds, roles: [TRAINER_ROLE_ID] },
+  }).catch(() => {});
+
+}
+
+async function updateQualificationThreadMember(interaction, board, qualification, userId, shouldHaveAccess) {
+  const threadId = board.threads[qualification.key];
+  if (!threadId) return;
+
+  const thread = interaction.guild.channels.cache.get(threadId)
+    ?? await interaction.guild.channels.fetch(threadId).catch(() => null);
+  if (!thread || !thread.isThread()) return;
+
+  if (shouldHaveAccess) {
+    const signups = board.signups[qualification.key] ?? [];
+    for (const member of signups) {
+      await thread.members.add(member.id).catch(error => {
+        console.error(`Could not add ${member.id} to qualification thread ${threadId}:`, error);
+      });
+    }
+    return;
+  }
+
+  await thread.members.remove(userId).catch(error => {
+    console.error(`Could not remove ${userId} from qualification thread ${threadId}:`, error);
+  });
+}
+
+async function closeQualificationThread(interaction, board, qualification) {
+  const threadId = board.threads[qualification.key];
+  if (!threadId) return;
+
+  const thread = interaction.guild.channels.cache.get(threadId)
+    ?? await interaction.guild.channels.fetch(threadId).catch(() => null);
+  if (thread?.isThread()) {
+    await thread.setLocked(true, 'No applicants remain for this qualification').catch(error => {
+      console.error(`Could not lock qualification thread ${threadId}:`, error);
+    });
+    await thread.setArchived(true, 'No applicants remain for this qualification').catch(error => {
+      console.error(`Could not archive qualification thread ${threadId}:`, error);
+    });
+  }
+
+  board.threads[qualification.key] = null;
+}
+
 // ── Parse date input (accepts DD/MM/YYYY HH:MM or YYYY-MM-DD HH:MM) ──────────
 function parseDateTime(input) {
   const dmyMatch = input.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?:\s+(.+))?$/);
@@ -366,12 +598,15 @@ async function refreshTrainingMessage(interaction, tr, msgId) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('training')
-    .setDescription('Create a new training sign-up.')
+    .setDescription('Post the qualification training signup board.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .setDMPermission(false),
 
   init(client) {
     scheduleAllTrainingReminders(client);
+    client.once('ready', () => {
+      refreshStoredQualificationBoards(client);
+    });
   },
 
   async execute(interaction) {
@@ -379,31 +614,63 @@ module.exports = {
       return interaction.reply({ content: 'Only Officers and Commanders can create trainings.', ephemeral: true });
     }
 
-    const modal = new ModalBuilder()
-      .setCustomId('tr_create_modal')
-      .setTitle('Create Training');
+    await interaction.deferReply({ ephemeral: true });
 
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('title').setLabel('Title').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100),
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000),
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('time').setLabel('Date/time + optional timezone').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('28/05/2026 19:00 or 28/05/2026 19:00 EST'),
-      ),
-    );
+    const channelId = getConfig(interaction.guildId, 'TRAININGS_CHANNEL_ID') ?? DEFAULT_TRAININGS_CHANNEL_ID;
+    const channel = interaction.guild.channels.cache.get(channelId)
+      ?? await interaction.guild.channels.fetch(channelId).catch(() => null);
+    if (!channel) {
+      return interaction.editReply('❌ Trainings channel not found. Set it with `/config set-channel`.');
+    }
 
-    await interaction.showModal(modal);
+    const board = {
+      type: 'qualification-board',
+      createdBy: interaction.user.id,
+      createdByName: interaction.member.displayName,
+      createdAt: Date.now(),
+      channelId: channel.id,
+      signups: Object.fromEntries(QUALIFICATIONS.map(qualification => [qualification.key, []])),
+      threads: {},
+    };
+    const msg = await channel.send({
+      embeds: [buildQualificationEmbed(board, interaction.guild)],
+      allowedMentions: {
+        roles: QUALIFICATIONS
+          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .filter(Boolean),
+      },
+    });
+    await msg.edit({
+      embeds: [buildQualificationEmbed(board, interaction.guild)],
+      components: buildQualificationRows(msg.id),
+      allowedMentions: {
+        roles: QUALIFICATIONS
+          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .filter(Boolean),
+      },
+    });
+    saveTraining(interaction.guildId, msg.id, board);
+
+    return interaction.editReply(`✅ Qualification signup board posted in ${channel}.`);
   },
 
   // ── Button interactions ─────────────────────────────────────────────────────
   async handleButton(interaction) {
-    const [action, msgId] = interaction.customId.split(':');
+    const [action, msgId, qualificationKey] = interaction.customId.split(':');
     const tr = getTraining(interaction.guildId, msgId);
 
     if (!tr) return interaction.reply({ content: 'This training no longer exists.', ephemeral: true });
+
+    if (action === 'tr_choose_qualifications' || action === 'tr_my_qualifications') {
+      if (tr.type !== 'qualification-board') {
+        return interaction.reply({ content: 'This is not a qualification signup board.', ephemeral: true });
+      }
+      return interaction.reply({
+        content: 'Your current qualifications are checked. Select the qualifications you want to keep, then submit.',
+        components: buildPersonalQualificationRows(msgId, tr, interaction.user.id),
+        ephemeral: true,
+      });
+    }
 
     // ── RSVP buttons ────────────────────────────────────────────────────────
     if (action === 'tr_accept' || action === 'tr_decline' || action === 'tr_tentative') {
@@ -484,6 +751,108 @@ module.exports = {
       clearReminder(interaction.guildId, msgId);
       return interaction.reply({ content: '🗑️ Training deleted.', ephemeral: true });
     }
+  },
+
+  // ── Qualification select menu interactions ────────────────────────────────
+  async handleSelect(interaction) {
+    const [action, msgId] = interaction.customId.split(':');
+    if (action !== 'tr_qualify' && action !== 'tr_manage_qualifications') return;
+
+    const tr = getTraining(interaction.guildId, msgId);
+    const qualifications = interaction.values
+      .map(value => QUALIFICATION_BY_KEY.get(value))
+      .filter(Boolean);
+    if (!tr || tr.type !== 'qualification-board' || qualifications.length !== interaction.values.length) {
+      return interaction.reply({ content: 'This qualification signup is no longer available.', ephemeral: true });
+    }
+
+    if (action === 'tr_manage_qualifications') {
+      const selectedKeys = new Set(interaction.values);
+      const added = [];
+      const removed = [];
+      for (const qualification of QUALIFICATIONS) {
+        const signups = tr.signups[qualification.key] ?? [];
+        const alreadySignedUp = signups.some(member => member.id === interaction.user.id);
+        const shouldBeSignedUp = !qualification.closed && selectedKeys.has(qualification.key);
+        if (alreadySignedUp === shouldBeSignedUp) continue;
+
+        tr.signups[qualification.key] = shouldBeSignedUp
+          ? [...signups, { id: interaction.user.id, name: interaction.member.displayName }]
+          : signups.filter(member => member.id !== interaction.user.id);
+        (shouldBeSignedUp ? added : removed).push(qualification.name);
+
+        if (shouldBeSignedUp
+          && tr.signups[qualification.key].length >= TRAINING_REQUEST_THRESHOLD
+          && !tr.threads[qualification.key]) {
+          await openQualificationThread(interaction, tr, qualification);
+        }
+        await updateQualificationThreadMember(
+          interaction,
+          tr,
+          qualification,
+          interaction.user.id,
+          shouldBeSignedUp
+        );
+        if (!shouldBeSignedUp && tr.signups[qualification.key].length === 0) {
+          await closeQualificationThread(interaction, tr, qualification);
+        }
+      }
+
+      saveTraining(interaction.guildId, msgId, tr);
+      await refreshQualificationBoard(interaction, tr, msgId);
+      return interaction.update({
+        content: [
+          added.length ? `Signed you up for: ${added.map(name => `**${name}**`).join(', ')}.` : '',
+          removed.length ? `Removed your signup from: ${removed.map(name => `**${name}**`).join(', ')}.` : '',
+          !added.length && !removed.length ? 'No changes made.' : '',
+        ].filter(Boolean).join('\n'),
+        components: buildPersonalQualificationRows(msgId, tr, interaction.user.id),
+      });
+    }
+
+    const added = [];
+    const removed = [];
+    for (const qualification of qualifications) {
+      if (qualification.closed) {
+        removed.push(`${qualification.name} is closed`);
+        continue;
+      }
+      const signups = tr.signups[qualification.key] ?? [];
+      const alreadySignedUp = signups.some(member => member.id === interaction.user.id);
+      tr.signups[qualification.key] = alreadySignedUp
+        ? signups.filter(member => member.id !== interaction.user.id)
+        : [...signups, { id: interaction.user.id, name: interaction.member.displayName }];
+
+      const updatedSignups = tr.signups[qualification.key];
+      if (alreadySignedUp) {
+        removed.push(qualification.name);
+      } else {
+        added.push(qualification.name);
+        if (updatedSignups.length >= TRAINING_REQUEST_THRESHOLD && !tr.threads[qualification.key]) {
+          await openQualificationThread(interaction, tr, qualification);
+        }
+      }
+      await updateQualificationThreadMember(
+        interaction,
+        tr,
+        qualification,
+        interaction.user.id,
+        !alreadySignedUp
+      );
+      if (alreadySignedUp && tr.signups[qualification.key].length === 0) {
+        await closeQualificationThread(interaction, tr, qualification);
+      }
+    }
+
+    saveTraining(interaction.guildId, msgId, tr);
+    await refreshQualificationBoard(interaction, tr, msgId);
+    return interaction.reply({
+      content: [
+        added.length ? `Signed you up for: ${added.map(name => `**${name}**`).join(', ')}.` : '',
+        removed.length ? `Removed your signup from: ${removed.map(name => `**${name}**`).join(', ')}.` : '',
+      ].filter(Boolean).join('\n'),
+      ephemeral: true,
+    });
   },
 
   // ── Modal submit interactions ───────────────────────────────────────────────

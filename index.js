@@ -12,8 +12,28 @@ if (!token) {
   process.exit(1);
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ]
+});
 client.commands = new Collection();
+
+function formatErrorMessage(error) {
+  if (!error) return 'Unknown error';
+
+  const raw = error.stack || error.message || String(error);
+  const cleaned = String(raw)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned) return 'Unknown error';
+  return cleaned.length > 600 ? `${cleaned.slice(0, 600).trimEnd()}…` : cleaned;
+}
 
 const commandDirs = [
   path.join(__dirname, 'commands'),
@@ -197,6 +217,40 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    if (handlerName.startsWith('logitask_')) {
+      const command = client.commands.get('logitask');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling logistics task button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that logistics task action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that logistics task action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
+    if (handlerName.startsWith('task_')) {
+      const command = client.commands.get('task');
+      if (command && typeof command.handleButton === 'function') {
+        try {
+          await command.handleButton(interaction);
+        } catch (error) {
+          console.error('Error handling task button:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error handling that task action!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error handling that task action!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
     if (handlerName === 'rr_toggle') {
       const command = client.commands.get('reactionrole');
       if (command && typeof command.handleButton === 'function') {
@@ -219,6 +273,23 @@ client.on(Events.InteractionCreate, async interaction => {
 
   if (interaction.isStringSelectMenu()) {
     const [prefix] = interaction.customId.split(':');
+    if (prefix === 'tr_qualify' || prefix === 'tr_manage_qualifications') {
+      const command = client.commands.get('training');
+      if (command && typeof command.handleSelect === 'function') {
+        try {
+          await command.handleSelect(interaction);
+        } catch (error) {
+          console.error('Error handling training qualification selection:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that qualification!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that qualification!', ephemeral: true });
+          }
+        }
+      }
+      return;
+    }
+
     if (prefix.startsWith('ticket_')) {
       const command = client.commands.get('ticketpanel');
       if (command && typeof command.handleSelect === 'function') {
@@ -250,6 +321,38 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.followUp({ content: 'There was an error processing that submission!', ephemeral: true });
           } else {
             await interaction.reply({ content: 'There was an error processing that submission!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix.startsWith('task_')) {
+      const command = client.commands.get('task');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling task modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that task submission!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that task submission!', ephemeral: true });
+          }
+        }
+      }
+    }
+
+    if (prefix.startsWith('logitask_')) {
+      const command = client.commands.get('logitask');
+      if (command && typeof command.handleModal === 'function') {
+        try {
+          await command.handleModal(interaction);
+        } catch (error) {
+          console.error('Error handling logistics task modal:', error);
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error processing that logistics task submission!', ephemeral: true });
+          } else {
+            await interaction.reply({ content: 'There was an error processing that logistics task submission!', ephemeral: true });
           }
         }
       }
@@ -349,10 +452,11 @@ client.on(Events.InteractionCreate, async interaction => {
     await command.execute(interaction);
   } catch (error) {
     console.error(`Error executing ${interaction.commandName}:`, error);
+    const message = formatErrorMessage(error);
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+      await interaction.followUp({ content: `There was an error while executing this command: ${message}`, ephemeral: true });
     } else {
-      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+      await interaction.reply({ content: `There was an error while executing this command: ${message}`, ephemeral: true });
     }
   }
 });
@@ -372,6 +476,9 @@ for (const file of featureFiles) {
   try {
     const feature = require(featurePath);
     if (feature && 'data' in feature && 'execute' in feature) {
+      if (typeof feature.init === 'function') {
+        feature.init(client);
+      }
       continue;
     }
 
