@@ -58,6 +58,19 @@ function getLocationMatch(input) {
   return findLocationMatch(input).exact || null;
 }
 
+function searchLocations(query) {
+  const search = normalizeLocationText(query);
+  const results = [];
+  for (const location of readLocations().locations || []) {
+    if (!search || [location.name, ...(location.aliases || [])].some(value => normalizeLocationText(value).includes(search))) results.push(location.name);
+    for (const region of location.regions || []) {
+      const name = region.name || region;
+      if (search && [`${location.name}, ${name}`, name, ...(region.aliases || [])].some(value => normalizeLocationText(value).includes(search))) results.push(`${location.name}, ${name}`);
+    }
+  }
+  return [...new Set(results)];
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('locations')
@@ -66,6 +79,7 @@ module.exports = {
     .addStringOption(opt =>
       opt.setName('query')
         .setDescription('Search by location name or alias')
+        .setAutocomplete(true)
         .setRequired(false)
     ),
 
@@ -80,17 +94,13 @@ module.exports = {
           new EmbedBuilder()
             .setColor(0x5865F2)
             .setTitle('🗺️ Foxhole Locations')
-            .setDescription(names)
+            .setDescription(names || 'No locations loaded.')
             .setFooter({ text: 'Use /locations query:Name to search for a known location.' })
         ]
       });
     }
 
-    const normalized = normalizeLocationText(query);
-    const matches = (locations || []).filter(item => {
-      const haystacks = [item.name, ...(item.aliases || [])];
-      return haystacks.some(text => normalizeLocationText(text).includes(normalized));
-    });
+    const matches = searchLocations(query);
 
     if (!matches.length) {
       return interaction.reply({
@@ -102,13 +112,16 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle('🗺️ Foxhole Location Match')
-      .setDescription(matches.slice(0, 10).map(item => `• ${item.name}`).join('\n'))
+      .setDescription(matches.slice(0, 20).map(item => `• ${item}`).join('\n'))
       .setTimestamp();
 
     return interaction.reply({ embeds: [embed] });
   },
 
   normalizeLocationText,
+  async autocomplete(interaction) {
+    return interaction.respond(searchLocations(interaction.options.getFocused()).slice(0, 25).map(name => ({ name: name.slice(0, 100), value: name.slice(0, 100) })));
+  },
   getLocationMatch,
   findLocationMatch,
 };

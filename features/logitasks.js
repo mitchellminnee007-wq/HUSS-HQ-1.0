@@ -386,7 +386,7 @@ async function fetchGuildThread(client, guildId, threadId) {
 }
 
 async function relayThreadMessage(client, task, sourceMessage, targetSide) {
-  if (!task || !sourceMessage || !sourceMessage.content?.trim()) return;
+  if (!task || !sourceMessage || (!sourceMessage.content?.trim() && !sourceMessage.attachments?.size)) return;
   if (sourceMessage.author?.bot) return;
   if (sourceMessage.content.includes(RELAY_MARKER)) return;
   if (isRelayBlocked(task.id, sourceMessage.id)) return;
@@ -404,7 +404,11 @@ async function relayThreadMessage(client, task, sourceMessage, targetSide) {
   const prefix = targetSide === 'huss' ? '[WHL]' : '[HUSS]';
 
   markRelayHandled(task.id, sourceMessage.id);
-  await targetThread.send(`${prefix} ${authorName}\n${sourceMessage.content}`);
+  const content = `${prefix} ${authorName}\n${sourceMessage.content || ''}`;
+  const files = [...(sourceMessage.attachments?.values() || [])].slice(0, 10).map(file => ({ attachment: file.url, name: file.name }));
+  for (let offset = 0; offset < content.length; offset += 1900) {
+    await targetThread.send({ content: content.slice(offset, offset + 1900), files: offset === 0 ? files : [], allowedMentions: { parse: [] } });
+  }
 }
 
 async function createHussThread(client, task) {
@@ -587,20 +591,11 @@ module.exports = {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('priority')
-          .setLabel('Priority')
+          .setLabel('Priority / Type')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
-          .setPlaceholder('low / normal / critical')
-          .setMaxLength(20)
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId('type')
-          .setLabel('Type')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setPlaceholder('transport / frontline supply')
-          .setMaxLength(30)
+          .setPlaceholder('normal / transport  OR  critical / frontline supply')
+          .setMaxLength(60)
       ),
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
@@ -645,9 +640,11 @@ module.exports = {
 
   async handleModal(interaction) {
     if (interaction.customId !== 'logitask_create_modal') return;
+    if (!isLeadershipMember(interaction.member)) return interaction.reply({ content: 'Only officers / leadership can create logistics tasks.', ephemeral: true });
 
-    const priorityInput = interaction.fields.getTextInputValue('priority');
-    const typeInput = interaction.fields.getTextInputValue('type');
+    const combined = interaction.fields.getTextInputValue('priority').split('/').map(value => value.trim());
+    const priorityInput = combined[0];
+    const typeInput = interaction.fields.fields.get('type')?.value || combined[1] || '';
     const requestedItemsInput = interaction.fields.getTextInputValue('requested_items').trim();
     const destinationInput = interaction.fields.getTextInputValue('destination').trim();
     const storageTypeInput = interaction.fields.getTextInputValue('storage_type').trim();
@@ -823,7 +820,7 @@ module.exports = {
   init(client) {
     client.on('messageCreate', async message => {
       if (message.author.bot || !message.channel || !message.channel.isThread?.()) return;
-      if (!message.content || !message.content.trim()) return;
+      if (!message.content?.trim() && !message.attachments?.size) return;
       if (message.content.includes(RELAY_MARKER)) return;
       if (message.content.startsWith('[WHL] ') || message.content.startsWith('[HUSS] ')) return;
       if (isRelayBlocked(message.channel.id, message.id)) return;

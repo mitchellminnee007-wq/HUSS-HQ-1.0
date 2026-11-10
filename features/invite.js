@@ -7,8 +7,12 @@ const INVITE_PERMISSIONS = [
   PermissionFlagsBits.EmbedLinks,
   PermissionFlagsBits.ReadMessageHistory,
   PermissionFlagsBits.ManageRoles,
-  PermissionFlagsBits.KickMembers,
-  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.ManageChannels,
+  PermissionFlagsBits.AttachFiles,
+  PermissionFlagsBits.CreatePublicThreads,
+  PermissionFlagsBits.CreatePrivateThreads,
+  PermissionFlagsBits.SendMessagesInThreads,
+  PermissionFlagsBits.ManageThreads,
 ].reduce((acc, perm) => acc | perm, 0n);
 
 module.exports = {

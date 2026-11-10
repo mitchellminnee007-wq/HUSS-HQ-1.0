@@ -13,10 +13,19 @@ const {
 } = require('discord.js');
 
 const RR_STORE_PATH = path.join(__dirname, '..', 'data', 'reactionroles.json');
+const { getAllConfig } = require('../utils/config');
 const OFFICER_RANKS = ['Officer', 'Commander'];
 
 function isOfficer(member) {
   return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
+}
+
+function safeSelfRole(role) {
+  const sensitive = [PermissionFlagsBits.Administrator, PermissionFlagsBits.ManageGuild, PermissionFlagsBits.ManageRoles, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.KickMembers, PermissionFlagsBits.BanMembers, PermissionFlagsBits.ManageWebhooks, PermissionFlagsBits.ModerateMembers];
+  return role && !role.managed && role.id !== role.guild.id && role.editable
+    && !role.permissions.any(sensitive)
+    && !Object.entries(getAllConfig(role.guild.id)).some(([key, value]) => key.endsWith('_ROLE_ID') && value === role.id)
+    && !/^(officer|commander|recruitment officer|trainer|cadet|private|legionaire|dragoon|hussars?|member|ally|unverified|warning.*|qualified.*)$/i.test(role.name);
 }
 
 function readRRStore() {
@@ -105,6 +114,7 @@ module.exports = {
 
   async handleModal(interaction) {
     if (interaction.customId !== 'rr_setup_modal') return;
+    if (!isOfficer(interaction.member)) return interaction.reply({ content: 'Only Officers and Commanders can configure self-select roles.', ephemeral: true });
 
     await interaction.deferReply({ ephemeral: true });
 
@@ -129,6 +139,8 @@ module.exports = {
         if (!role) {
           throw new Error(`Role with ID ${roleId} not found.`);
         }
+        if (!safeSelfRole(role)) throw new Error('Choose an editable interest/notification role without staff permissions or membership/rank privileges.');
+        if (buttonLabel.length > 80) throw new Error('Button labels must be at most 80 characters.');
 
         roles[roleId] = buttonLabel;
       }
@@ -136,6 +148,8 @@ module.exports = {
       if (Object.keys(roles).length === 0) {
         throw new Error('No valid roles provided.');
       }
+      if (Object.keys(roles).length > 25) throw new Error('Use at most 25 roles per panel.');
+      if (title.length > 256 || description.length > 4096) throw new Error('Title or description is too long.');
 
       // Create embed
       const embed = new EmbedBuilder()
@@ -196,6 +210,7 @@ module.exports = {
         ephemeral: true
       });
     }
+    if (!rrData.roles[roleId]) return interaction.reply({ content: 'This role is not configured on this panel.', ephemeral: true });
 
     try {
       const role = await interaction.guild.roles.fetch(roleId).catch(() => null);
@@ -206,6 +221,7 @@ module.exports = {
           ephemeral: true
         });
       }
+      if (!safeSelfRole(role)) return interaction.reply({ content: 'This role is no longer eligible for self-selection. Ask an officer to update the panel.', ephemeral: true });
 
       const hasRole = interaction.member.roles.cache.has(roleId);
 

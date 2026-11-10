@@ -339,11 +339,12 @@ module.exports = {
     const title = buildTaskTitle(requestedItems, destination, priority);
 
     const whlGuildId = getConfig(interaction.guildId, 'WHL_GUILD_ID') || process.env.WHL_GUILD_ID || null;
-    const whlForumId = getConfig(interaction.guildId, 'WHL_LOGISTICS_FORUM_ID') || process.env.WHL_LOGISTICS_FORUM_ID || null;
+    const whlForumId = getConfig(interaction.guildId, 'LOGISTICS_TEST_FORUM_ID');
 
+    if (whlForumId && whlForumId === getConfig(interaction.guildId, 'WHL_LOGISTICS_FORUM_ID')) return interaction.reply({ content: 'The test forum must differ from the production logistics forum.', ephemeral: true });
     if (!whlGuildId || !whlForumId) {
       return interaction.reply({
-        content: 'This HUSS guild is missing the WHL config. Set the WHL Guild ID and WHL Logistics Forum first.',
+        content: 'Configure WHL Guild ID and a separate Logistics Test Forum first. Test requests are never posted to the production forum.',
         ephemeral: true,
       });
     }

@@ -1,15 +1,24 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getConfig } = require('../utils/config.js');
+const audit = require('../utils/audit');
 
 const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
-const highestOfficerPromoteIndex = ranks.indexOf('Dragoon');
+const promotionLimits = {
+  Officer: 'Hussar',
+  Commander: 'Officer',
+};
+
+function matchesRank(role, rank) {
+  return role.name === rank || (rank === 'Hussar' && role.name === 'Hussars');
+}
 
 function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => role.name === rank)) || null;
+  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
 }
 
 function getRankRole(guild, rank) {
-  return guild.roles.cache.find(role => role.name === rank) || null;
+  return guild.roles.cache.find(role => role.name === rank)
+    || guild.roles.cache.find(role => matchesRank(role, rank)) || null;
 }
 
 function getRoleByName(guild, roleName) {
@@ -18,7 +27,7 @@ function getRoleByName(guild, roleName) {
 }
 
 function getMemberRankRoles(member) {
-  return ranks.filter(rank => member.roles.cache.some(role => role.name === rank));
+  return [...member.roles.cache.values()].filter(role => ranks.some(rank => matchesRank(role, rank)));
 }
 
 module.exports = {
@@ -30,6 +39,7 @@ module.exports = {
         .setDescription('The member to promote')
         .setRequired(true)
     )
+    .addStringOption(option => option.setName('reason').setDescription('Reason for the promotion').setMaxLength(500).setRequired(false))
     .setDMPermission(false),
 
   async execute(interaction) {
@@ -40,13 +50,10 @@ module.exports = {
 
     const executor = interaction.member;
     const executorRank = getMemberRank(executor);
-    const recruitmentOfficerRole = getRoleByName(interaction.guild, 'Recruitment Officer');
-    const hasRecruitmentOfficerRole = recruitmentOfficerRole && executor.roles.cache.has(recruitmentOfficerRole.id);
-    const isOfficerOrCommander = executorRank === 'Officer' || executorRank === 'Commander';
-    const isRecruitmentOfficer = hasRecruitmentOfficerRole && !isOfficerOrCommander;
+    const maximumRank = promotionLimits[executorRank];
     
-    if (!isOfficerOrCommander && !isRecruitmentOfficer) {
-      return interaction.reply({ content: 'Only Officers, Commanders, and Recruitment Officers can promote members.', ephemeral: true });
+    if (!maximumRank) {
+      return interaction.reply({ content: 'Only Officers and Commanders can promote members.', ephemeral: true });
     }
 
     const targetRank = getMemberRank(target);
@@ -56,17 +63,15 @@ module.exports = {
     }
 
     const nextRank = ranks[currentIndex + 1];
-    if (isRecruitmentOfficer && nextRank !== 'Cadet') {
-      return interaction.reply({ content: 'Recruitment Officers can only promote members to Cadet.', ephemeral: true });
-    }
-    if ((isOfficerOrCommander || isRecruitmentOfficer) && currentIndex + 1 > highestOfficerPromoteIndex) {
-      return interaction.reply({ content: 'Officers and Recruitment Officers can only promote members up to Dragoon.', ephemeral: true });
+    if (currentIndex + 1 > ranks.indexOf(maximumRank)) {
+      return interaction.reply({ content: `Your ${executorRank} rank can promote members up to ${maximumRank}. This member is already ${targetRank}; the next rank would be ${nextRank}.`, ephemeral: true });
     }
 
     const nextRole = getRankRole(interaction.guild, nextRank);
     if (!nextRole) {
       return interaction.reply({ content: `The rank role "${nextRank}" does not exist on this server.`, ephemeral: true });
     }
+    if (nextRole.editable === false || getMemberRankRoles(target).some(role => role.editable === false)) return interaction.reply({ content: 'The bot cannot manage these ranks. Move its role above the affected ranks and grant Manage Roles.', ephemeral: true });
 
     let demotedCommanders = [];
     let hussarRole = null;
@@ -85,9 +90,7 @@ module.exports = {
       }
     }
 
-    const rolesToRemove = getMemberRankRoles(target)
-      .map(rank => getRankRole(interaction.guild, rank))
-      .filter(Boolean);
+    const rolesToRemove = getMemberRankRoles(target);
 
     const formerMemberRoleId = getConfig(interaction.guildId, 'FORMER_MEMBER_ROLE_ID');
     const formerMemberRole = formerMemberRoleId ? interaction.guild.roles.cache.get(formerMemberRoleId) : null;
@@ -140,6 +143,7 @@ module.exports = {
       });
     }
 
+    audit.record(interaction, 'member.promoted', target.id, { from: previousRank, to: nextRank, reason: interaction.options.getString?.('reason') || null });
     await interaction.reply({
       content: `${target}`,
       embeds: [embed],

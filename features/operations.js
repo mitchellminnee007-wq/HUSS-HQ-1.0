@@ -67,9 +67,6 @@ async function sendOperationReminder(client, guildId, msgId, op) {
   const channel = await client.channels.fetch(op.channelId).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  op.reminderSent = true;
-  saveOp(guildId, msgId, op);
-
   const timestamp = Math.floor(op.time / 1000);
   const content = acceptedIds.length
     ? acceptedIds.map(id => `<@${id}>`).join(' ')
@@ -92,6 +89,7 @@ async function sendOperationReminder(client, guildId, msgId, op) {
 
   // Store the reminder message ID so it can be cleaned up when the op is deleted
   if (reminderMsg) {
+    op.reminderSent = true;
     op.reminderMsgId = reminderMsg.id;
     saveOp(guildId, msgId, op);
   }
@@ -479,6 +477,8 @@ module.exports = {
   // ── Modal submit interactions ───────────────────────────────────────────────
   async handleModal(interaction) {
     const [action, msgId] = interaction.customId.split(':');
+    const existing = msgId ? getOp(interaction.guildId, msgId) : null;
+    if (!isOfficer(interaction.member) && !(action === 'op_edit_modal' && existing?.createdBy === interaction.user.id)) return interaction.reply({ content: 'You no longer have permission to create or edit this operation.', ephemeral: true });
 
     // ── Create new operation ────────────────────────────────────────────────
     if (action === 'op_create_modal') {
@@ -487,8 +487,8 @@ module.exports = {
       const timeStr     = interaction.fields.getTextInputValue('time');
 
       const parsedDate = parseDateTime(timeStr);
-      if (!parsedDate || isNaN(parsedDate.getTime())) {
-        return interaction.reply({ content: '❌ Invalid date format. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
+      if (!require('../utils/event-date').validCalendarInput(timeStr) || !parsedDate || isNaN(parsedDate.getTime()) || parsedDate.getTime() <= Date.now()) {
+        return interaction.reply({ content: '❌ Enter a valid future date. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -548,8 +548,8 @@ module.exports = {
       const timeStr     = interaction.fields.getTextInputValue('time');
 
       const parsedDate = parseDateTime(timeStr);
-      if (!parsedDate || isNaN(parsedDate.getTime())) {
-        return interaction.reply({ content: '❌ Invalid date format. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
+      if (!require('../utils/event-date').validCalendarInput(timeStr) || !parsedDate || isNaN(parsedDate.getTime()) || parsedDate.getTime() <= Date.now()) {
+        return interaction.reply({ content: '❌ Enter a valid future date. Use `DD/MM/YYYY HH:MM` and optionally add a timezone, like `28/05/2026 19:00 EST`, `UTC+10`, or `America/New_York`.', ephemeral: true });
       }
 
       op.title       = title;

@@ -68,4 +68,4 @@ async function getFoxholeIconUrl(itemName) {
   }
 }
 
-module.exports = { findFoxholeItem, getFoxholeIconUrl };
+module.exports = { findFoxholeItem, getFoxholeIconUrl, getFoxholeItems: () => records };

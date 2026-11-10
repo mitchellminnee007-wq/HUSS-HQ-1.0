@@ -8,6 +8,15 @@ const {
   ButtonStyle
 } = require('discord.js');
 const { getConfig } = require('../utils/config');
+const audit = require('../utils/audit');
+
+function configuredRoles(guildId) {
+  return {
+    active: getConfig(guildId, 'ACTIVE_WAR_ROLE_ID') || ACTIVE_ROLE_ID,
+    unverified: getConfig(guildId, 'UNVERIFIED_ROLE_ID') || UNVERIFIED_ROLE_ID,
+    former: getConfig(guildId, 'FORMER_MEMBER_ROLE_ID') || FORMER_MEMBER_ROLE_ID,
+  };
+}
 
 const ACTIVE_ROLE_ID        = '1424722021325082625'; // Active role
 const UNVERIFIED_ROLE_ID    = '1386229683963826346';
@@ -80,8 +89,9 @@ function canEditRole(role) {
 
 async function clearActiveMembers(guild) {
   await guild.members.fetch();
-  const activeRole = guild.roles.cache.get(ACTIVE_ROLE_ID)
-    ?? await guild.roles.fetch(ACTIVE_ROLE_ID).catch(() => null);
+  const activeId = configuredRoles(guild.id).active;
+  const activeRole = guild.roles.cache.get(activeId)
+    ?? await guild.roles.fetch(activeId).catch(() => null);
 
   if (!activeRole) return { role: null, removed: 0, failed: 0 };
 
@@ -140,7 +150,8 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
   await guild.members.fetch();
   await guild.roles.fetch();
 
-  const activeRoleId = ACTIVE_ROLE_ID;
+  const roleIds = configuredRoles(guild.id);
+  const activeRoleId = roleIds.active;
   const allyRoleId = getConfig(guild.id, 'ALLY_ROLE_ID') || null;
 
   const activeRole = guild.roles.cache.get(activeRoleId)
@@ -150,11 +161,18 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
     ? guild.roles.cache.get(allyRoleId) ?? await guild.roles.fetch(allyRoleId).catch(() => null)
     : null;
 
-  const unverifiedRole = guild.roles.cache.get(UNVERIFIED_ROLE_ID)
-    ?? await guild.roles.fetch(UNVERIFIED_ROLE_ID).catch(() => null);
+  const unverifiedRole = guild.roles.cache.get(roleIds.unverified)
+    ?? await guild.roles.fetch(roleIds.unverified).catch(() => null);
 
-  const formerMemberRole = guild.roles.cache.get(FORMER_MEMBER_ROLE_ID)
-    ?? await guild.roles.fetch(FORMER_MEMBER_ROLE_ID).catch(() => null);
+  const formerMemberRole = guild.roles.cache.get(roleIds.former)
+    ?? await guild.roles.fetch(roleIds.former).catch(() => null);
+
+  if (![activeRole, unverifiedRole, formerMemberRole].every(canEditRole)) {
+    throw new Error('Rollover stopped: configure Active War, Unverified and Former Member roles and place the bot above them. No roles were changed.');
+  }
+  if (new Set([activeRole.id, unverifiedRole.id, formerMemberRole.id]).size !== 3) {
+    throw new Error('Rollover roles must be three different roles. No roles were changed.');
+  }
 
   console.log(`[Rollover] Active role: ${roleName(activeRole)}`);
   console.log(`[Rollover] Ally role: ${roleName(allyRole)}`);
@@ -392,6 +410,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('startrollover')
     .setDescription(`Schedule the rollover: reset non-active members in ${ROLLOVER_DAYS} days.`)
+    .addBooleanOption(option => option.setName('confirm').setDescription('Confirm clearing activity roles and scheduling the member reset').setRequired(true))
     .setDMPermission(false),
 
   async execute(interaction) {
@@ -401,6 +420,8 @@ module.exports = {
         ephemeral: true
       });
     }
+
+    if (!interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'No changes made. This clears current activity roles and schedules an automatic member reset. Set confirm:True to start.', ephemeral: true });
 
     const store = readStore();
 
@@ -441,14 +462,15 @@ module.exports = {
 
       const timestamp = Math.floor(executeAt / 1000);
       const roleName = cleared.role.name;
-      await interaction.channel.send(buildActivityCheckMessage(roleName, timestamp));
+      const activityMessage = await interaction.channel.send(buildActivityCheckMessage(roleName, timestamp));
+      require('../utils/activity-store').register(activityMessage, interaction.guildId, timestamp);
 
       const embed = new EmbedBuilder()
         .setColor(0xF39C12)
         .setTitle('⏳ Rollover Scheduled')
         .setDescription(
           `The existing **${roleName}** roster was cleared. Members must click **Mark Active** in the activity check message to stay active.\n\n` +
-          `In **${ROLLOVER_DAYS} days**, members without the active role will have their roles removed and receive <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`
+          `In **${ROLLOVER_DAYS} days**, members without the active role will have their roles removed and receive <@&${configuredRoles(interaction.guildId).unverified}> and <@&${configuredRoles(interaction.guildId).former}>.`
         )
         .addFields(
           { name: 'Members cleared', value: `${cleared.removed}`, inline: true },
@@ -509,6 +531,7 @@ module.exports = {
         .setDescription('Dry run — do not apply changes')
         .setRequired(false)
     )
+    .addBooleanOption(option => option.setName('confirm').setDescription('Confirm changing member roles when dry is false.').setRequired(false))
     .setDMPermission(false),
 
   async executeRun(interaction) {
@@ -519,7 +542,8 @@ module.exports = {
       });
     }
 
-    const dry = interaction.options.getBoolean('dry') ?? false;
+    const dry = interaction.options.getBoolean('dry') ?? true;
+    if (!dry && !interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'Run /runrollover first for a preview. To apply changes use dry:False confirm:True.', ephemeral: true });
 
     const gate = acquireRollover(interaction.guildId);
     if (!gate.allowed) {
@@ -533,6 +557,7 @@ module.exports = {
 
     try {
       const result = await executeRollover(interaction.guild, interaction.channelId, dry);
+      audit.record(interaction, dry ? 'rollover.preview' : 'rollover.run', null, { membersReset: result.membersReset, rolesRemoved: result.rolesRemoved });
 
       return interaction.editReply({
         content:

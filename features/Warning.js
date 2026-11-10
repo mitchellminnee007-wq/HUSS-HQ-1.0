@@ -1,15 +1,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   EmbedBuilder,
   SlashCommandBuilder
 } = require('discord.js');
 const { getConfig } = require('../utils/config');
+const { canModerate } = require('../utils/ranks');
+const audit = require('../utils/audit');
 
-const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
+const { ranks, matchesRank } = require('../utils/ranks');
 const officerRanks = ['Officer', 'Commander'];
 const warningRoleNames = ['Warning I', 'Warning II', 'Warning III'];
 const warningStorePath = path.join(__dirname, '..', 'data', 'warnings.json');
@@ -41,7 +40,8 @@ function readStore() {
 
 function writeStore(store) {
   ensureStore();
-  fs.writeFileSync(warningStorePath, JSON.stringify(store, null, 2));
+  fs.writeFileSync(`${warningStorePath}.tmp`, JSON.stringify(store, null, 2));
+  fs.renameSync(`${warningStorePath}.tmp`, warningStorePath);
 }
 
 function getGuildStore(store, guildId) {
@@ -60,17 +60,15 @@ function getMemberRecord(guildStore, userId) {
 
 function getRoleByName(guild, roleName) {
   const normalized = roleName.toLowerCase();
-  return guild.roles.cache.find(role => role.name.toLowerCase() === normalized) || null;
+  return guild.roles.cache.find(role => role.name.toLowerCase() === normalized || matchesRank(role, roleName)) || null;
 }
 
 function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => role.name === rank)) || null;
+  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
 }
 
 function getRankRoles(member) {
-  return ranks
-    .map(rank => getRoleByName(member.guild, rank))
-    .filter(role => role && member.roles.cache.has(role.id));
+  return [...member.roles.cache.values()].filter(role => ranks.some(rank => matchesRank(role, rank)));
 }
 
 function getWarningRoles(guild) {
@@ -93,30 +91,10 @@ function activeWarningCount(record) {
 }
 
 function clearActiveWarnings(record) {
-  record.warnings = record.warnings.filter(warning => warning.forgivenAt);
-}
-
-function latestActiveWarning(record) {
-  return record.warnings
-    .filter(warning => !warning.forgivenAt)
-    .sort((a, b) => b.createdAt - a.createdAt)[0] || null;
-}
-
-function hasOpenVoteForTarget(guildStore, targetId) {
-  return Object.values(guildStore.votes).some(vote =>
-    vote.targetId === targetId &&
-    !vote.closed &&
-    Date.now() <= vote.expiresAt
-  );
-}
-
-function hasAutomatedVoteThisMonth(record) {
-  return record.automatedVoteMonths?.includes(currentMonthKey());
-}
-
-function markAutomatedVoteThisMonth(record) {
-  record.automatedVoteMonths ??= [];
-  record.automatedVoteMonths.push(currentMonthKey());
+  for (const warning of record.warnings.filter(warning => !warning.forgivenAt)) {
+    warning.forgivenAt = Date.now();
+    warning.resolution = 'discharge';
+  }
 }
 
 function oldestActiveWarning(record) {
@@ -132,22 +110,6 @@ function hasAutomaticForgivenessThisMonth(record) {
 function markAutomaticForgivenessThisMonth(record) {
   record.automaticForgivenessMonths ??= [];
   record.automaticForgivenessMonths.push(currentMonthKey());
-}
-
-function canStartRemovalVote(record, guildStore, targetId) {
-  const warning = latestActiveWarning(record);
-  if (!warning) {
-    return false;
-  }
-
-  if (Date.now() - warning.createdAt < warningForgiveAgeMs) {
-    return false;
-  }
-
-  const monthKey = currentMonthKey();
-  return !record.forgivenMonths.includes(monthKey) &&
-    !hasAutomatedVoteThisMonth(record) &&
-    !hasOpenVoteForTarget(guildStore, targetId);
 }
 
 function formatWarningList(record) {
@@ -183,6 +145,7 @@ async function dischargeMember(member) {
   const formerCollieRole = getRoleByName(member.guild, 'Former collie');
   const rolesToRemove = [
     ...getRankRoles(member),
+    ...member.roles.cache.filter(role => role.name.toLowerCase() === 'member').values(),
     ...getWarningRoles(member.guild).filter(role => member.roles.cache.has(role.id))
   ];
 
@@ -249,113 +212,14 @@ async function syncWarningRoles(member, warningCount) {
   return warningRoleNames.filter(roleName => !getRoleByName(member.guild, roleName));
 }
 
-function buildVoteEmbed(target, vote, activeCount) {
-  return new EmbedBuilder()
-    .setTitle('Warning Removal Vote')
-    .setColor(0xffcc00)
-    .setDescription(`Vote to remove one warning from ${target}.`)
-    .addFields(
-      { name: 'Active warnings', value: String(activeCount), inline: true },
-      { name: 'Yes votes', value: String(vote.yes.length), inline: true },
-      { name: 'No votes', value: String(vote.no.length), inline: true },
-      { name: 'Reason', value: vote.reason || 'No reason provided.', inline: false }
-    )
-    .setFooter({ text: `Needs ${requiredYesVotes} yes votes. Vote closes in 24 hours.` })
-    .setTimestamp();
+let warningQueue = Promise.resolve();
+function serialized(action) {
+  const next = warningQueue.then(action);
+  warningQueue = next.catch(() => {});
+  return next;
 }
-
-function buildVoteButtons(voteId, disabled = false) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`warning_vote:${voteId}:yes`)
-      .setLabel('Approve')
-      .setStyle(ButtonStyle.Success)
-      .setDisabled(disabled),
-    new ButtonBuilder()
-      .setCustomId(`warning_vote:${voteId}:no`)
-      .setLabel('Reject')
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(disabled)
-  );
-}
-
-function createRemovalVote(guildStore, targetId, starterId, reason, automated = false) {
-  const voteId = `${Date.now()}-${targetId}`;
-  const vote = {
-    id: voteId,
-    targetId,
-    starterId,
-    reason,
-    yes: automated ? [] : [starterId],
-    no: [],
-    createdAt: Date.now(),
-    expiresAt: Date.now() + voteDurationMs,
-    closed: false,
-    automated
-  };
-
-  guildStore.votes[voteId] = vote;
-  return vote;
-}
-
-async function removeOneWarning(guildStore, record, moderatorId) {
-  const warning = latestActiveWarning(record);
-  if (!warning) {
-    return false;
-  }
-
-  warning.forgivenAt = Date.now();
-  warning.forgivenBy = moderatorId;
-  record.forgivenMonths.push(currentMonthKey());
-  return true;
-}
-
-async function sendAutomatedRemovalVotes(client) {
-  const store = readStore();
-  let changed = false;
-
-  for (const [guildId, guildStore] of Object.entries(store.guilds)) {
-    const guild = await client.guilds.fetch(guildId).catch(() => null);
-    if (!guild) continue;
-
-    const officerChannelId = getConfig(guildId, 'OFFICER_CHANNEL_ID');
-    if (!officerChannelId) {
-      console.warn(`OFFICER_CHANNEL_ID not configured for guild ${guildId}; skipping automated warning removal votes.`);
-      continue;
-    }
-
-    const channel = await guild.channels.fetch(officerChannelId).catch(() => null);
-    if (!channel || !channel.isTextBased()) continue;
-
-    for (const [targetId, record] of Object.entries(guildStore.members || {})) {
-      if (!canStartRemovalVote(record, guildStore, targetId)) continue;
-
-      const target = await guild.members.fetch(targetId).catch(() => null);
-      const vote = createRemovalVote(
-        guildStore,
-        targetId,
-        client.user.id,
-        'This member has a warning older than 30 days. Officers may vote to remove one warning.',
-        true
-      );
-      markAutomatedVoteThisMonth(record);
-      changed = true;
-
-      await channel.send({
-        content: `Automated warning review opened for ${target || `<@${targetId}>`}.`,
-        embeds: [buildVoteEmbed(target || `<@${targetId}>`, vote, activeWarningCount(record))],
-        components: [buildVoteButtons(vote.id)],
-        allowedMentions: { users: [targetId] }
-      });
-    }
-  }
-
-  if (changed) {
-    writeStore(store);
-  }
-}
-
-async function sendAutomaticForgiveness(client) {
+function sendAutomaticForgiveness(client) { return serialized(() => runAutomaticForgiveness(client)); }
+async function runAutomaticForgiveness(client) {
   const store = readStore();
   let changed = false;
 
@@ -367,7 +231,8 @@ async function sendAutomaticForgiveness(client) {
     const channel = officerChannelId ? await guild.channels.fetch(officerChannelId).catch(() => null) : null;
 
     for (const [targetId, record] of Object.entries(guildStore.members || {})) {
-      if (hasAutomaticForgivenessThisMonth(record)) continue;
+      if (!record.lastAutomaticForgivenessAt && hasAutomaticForgivenessThisMonth(record)) continue;
+      if (record.lastAutomaticForgivenessAt && Date.now() - record.lastAutomaticForgivenessAt < warningForgiveAgeMs) continue;
 
       const warning = oldestActiveWarning(record);
       if (!warning) continue;
@@ -377,6 +242,7 @@ async function sendAutomaticForgiveness(client) {
       warning.forgivenAt = Date.now();
       warning.forgivenBy = client.user?.id || 'system';
       markAutomaticForgivenessThisMonth(record);
+      record.lastAutomaticForgivenessAt = Date.now();
       changed = true;
 
       // Try to sync roles for the member if available
@@ -408,7 +274,7 @@ module.exports = {
     )
     .addStringOption(option =>
       option.setName('reason')
-        .setDescription('The reason for the warning')
+.setDescription('The reason for the warning').setMaxLength(1000)
         .setRequired(true)
     )
     .setDMPermission(false),
@@ -420,19 +286,9 @@ module.exports = {
 
   init(client) {
     client.once('clientReady', async () => {
-      await sendAutomatedRemovalVotes(client).catch(error => {
-        console.error('Error sending automated warning removal votes:', error);
-      });
-
       await sendAutomaticForgiveness(client).catch(error => {
         console.error('Error running automatic forgiveness:', error);
       });
-
-      setInterval(() => {
-        sendAutomatedRemovalVotes(client).catch(error => {
-          console.error('Error sending automated warning removal votes:', error);
-        });
-      }, checkIntervalMs);
 
       setInterval(() => {
         sendAutomaticForgiveness(client).catch(error => {
@@ -443,6 +299,12 @@ module.exports = {
   },
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+    const deferred = Object.create(interaction);
+    deferred.reply = payload => interaction.editReply(payload);
+    return serialized(() => module.exports.executeWarning(deferred));
+  },
+  async executeWarning(interaction) {
     if (!isOfficer(interaction.member)) {
       return interaction.reply({ content: 'Only Officers and Commanders can manage warnings.', ephemeral: true });
     }
@@ -451,6 +313,7 @@ module.exports = {
     if (!target || !target.guild) {
       return interaction.reply({ content: 'That member is not available.', ephemeral: true });
     }
+    if (!canModerate(interaction.member, target)) return interaction.reply({ content: 'You can only warn members below your own rank, never yourself.', ephemeral: true });
 
     const store = readStore();
     const guildStore = getGuildStore(store, interaction.guild.id);
@@ -470,6 +333,23 @@ module.exports = {
     const missingRoles = [];
     let missingWarningRoles = [];
 
+    const requiredRoles = getWarningRoles(target.guild);
+    if (warningCount === 2) {
+      requiredRoles.push(...getRankRoles(target));
+      const index = ranks.indexOf(getMemberRank(target));
+      if (index > 0) {
+        const next = getRoleByName(target.guild, ranks[index - 1]);
+        if (!next) return interaction.reply({ content: 'The demotion role is missing. No warning was recorded.', ephemeral: true });
+        requiredRoles.push(next);
+      }
+    }
+    if (warningCount >= 3) {
+      const unverified = getRoleByName(target.guild, 'unverified');
+      if (!unverified) return interaction.reply({ content: 'The unverified role is missing. No warning was recorded.', ephemeral: true });
+      requiredRoles.push(unverified, getRoleByName(target.guild, 'Former collie'), ...getRankRoles(target), getRoleByName(target.guild, 'Member'));
+    }
+    if (requiredRoles.filter(Boolean).some(role => role.editable === false)) return interaction.reply({ content: 'The bot cannot manage all required warning or rank roles. No warning was recorded.', ephemeral: true });
+
     if (warningCount === 2) {
       missingWarningRoles = await syncWarningRoles(target, warningCount);
       const demotion = await demoteMember(target);
@@ -488,6 +368,8 @@ module.exports = {
     }
 
     writeStore(store);
+
+    audit.record(interaction, 'warning.issued', target.id, { reason, consequence });
 
     const embed = new EmbedBuilder()
       .setTitle('Warning Issued')
@@ -529,53 +411,8 @@ module.exports = {
   },
 
   async handleButton(interaction) {
-    const [, voteId, choice] = interaction.customId.split(':');
-    const store = readStore();
-    const guildStore = getGuildStore(store, interaction.guild.id);
-    const vote = guildStore.votes[voteId];
-
-    if (!vote) {
-      return interaction.reply({ content: 'That warning vote no longer exists.', ephemeral: true });
-    }
-
-    if (vote.closed || Date.now() > vote.expiresAt) {
-      vote.closed = true;
-      writeStore(store);
-      return interaction.reply({ content: 'That warning vote is already closed.', ephemeral: true });
-    }
-
-    if (!isOfficer(interaction.member)) {
-      return interaction.reply({ content: 'Only Officers and Commanders can vote on warnings.', ephemeral: true });
-    }
-
-    vote.yes = vote.yes.filter(id => id !== interaction.user.id);
-    vote.no = vote.no.filter(id => id !== interaction.user.id);
-    vote[choice].push(interaction.user.id);
-
-    const target = await interaction.guild.members.fetch(vote.targetId).catch(() => null);
-    const record = getMemberRecord(guildStore, vote.targetId);
-    let components = [buildVoteButtons(voteId)];
-    let content = `Vote recorded for ${target || `<@${vote.targetId}>`}.`;
-
-    if (vote.yes.length >= requiredYesVotes) {
-      const removed = await removeOneWarning(guildStore, record, interaction.user.id);
-      if (removed && target) {
-        await syncWarningRoles(target, activeWarningCount(record));
-      }
-      vote.closed = true;
-      content = removed
-        ? `Vote passed. One warning was removed from ${target || `<@${vote.targetId}>`}.`
-        : 'Vote passed, but there were no active warnings left to remove.';
-      components = [buildVoteButtons(voteId, true)];
-    }
-
-    writeStore(store);
-
-    await interaction.update({
-      content,
-      embeds: [buildVoteEmbed(target || `<@${vote.targetId}>`, vote, activeWarningCount(record))],
-      components,
-      allowedMentions: { users: [vote.targetId] }
-    });
+    return interaction.reply({ content: 'Warning votes have been retired. One eligible warning expires automatically after 30 days.', ephemeral: true });
   }
 };
+
+module.exports.runAutomaticForgiveness = sendAutomaticForgiveness;

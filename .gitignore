@@ -1,3 +1,10 @@
 node_modules/
 .env
 psw.txt
+data/verification-requests.json
+data/verification-requests.json.tmp
+
+data/audit.jsonl
+data/activity-checks.json
+data/logistics-inventory.json
+data/*.tmp

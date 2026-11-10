@@ -11,9 +11,9 @@ const {
   TextInputStyle,
   PermissionFlagsBits,
 } = require('discord.js');
-const { getConfig, getAllConfig } = require('../utils/config');
+const { getConfig } = require('../utils/config');
+const adminPanel = require('../utils/admin-panel');
 
-const DEFAULT_PANEL_CHANNEL_ID = '1509618529274560733';
 const OFFICER_RANKS = ['Officer', 'Commander'];
 const DEFAULT_WAR_ROLE_ID = '1424722021325082625';
 const DEFAULT_ACTIVITY_TIMER_MINUTES = 5760;
@@ -129,7 +129,6 @@ function buildKCPanelRow(msgId) {
 const ROLLOVER_STORE_PATH = path.join(__dirname, '..', 'data', 'rollover.json');
 const ROLLOVER_DAYS = 4;
 const ROLLOVER_MS = ROLLOVER_DAYS * 24 * 60 * 60 * 1000;
-const COLLIE_ROLE_ID = '1386230860587733123';
 const UNVERIFIED_ROLE_ID = '1386229683963826346';
 const FORMER_MEMBER_ROLE_ID = '1426128855202271242';
 
@@ -159,9 +158,9 @@ function buildTicketPanelEmbed() {
     .setColor(0x5865F2)
     .setTitle('🎫 Support Tickets')
     .setDescription(
-      'Choose a category below to open a ticket.\n' +
-      'Our officers will assist you as soon as possible.\n' +
-      'Choisissez une catégorie ci-dessous pour ouvrir un ticket. Nos officiers vous aideront dès que possible.'
+      '**Verification & allies:** send your F1 screenshot by DM after clicking below. An officer reviews it on the server and sends you the result.\n' +
+      '**Vérification et alliés :** envoyez votre capture F1 en MP après avoir cliqué ci-dessous. Un officier examine votre demande et vous communique le résultat.\n\n' +
+      'Officer questions open a private server ticket. / Les questions ouvrent un ticket privé sur le serveur.'
     )
     .addFields(
       {
@@ -170,7 +169,7 @@ function buildTicketPanelEmbed() {
       },
       {
         name: '🤝 Ally Request',
-        value: 'Request an alliance with our group. / Demandez une alliance avec notre groupe.',
+        value: 'Send your F1 screenshot and clan name by DM. / Envoyez votre capture F1 et le nom de votre clan en MP.',
       },
       {
         name: '🎖️ Officer Question',
@@ -358,101 +357,20 @@ function buildSignupChannelModal() {
           .setRequired(false)
           .setMaxLength(10),
       ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('signup_rollover')
+          .setLabel('Schedule 4-day rollover? Type YES to enable')
+          .setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(3)
+          .setPlaceholder('NO — activity check only'),
+      ),
     );
-}
-
-// ── Main panel embed & rows ───────────────────────────────────────────────────
-function buildPanelEmbed() {
-  return new EmbedBuilder()
-    .setColor(0x2C3E50)
-    .setTitle('⚙️ Officer Control Panel')
-    .setDescription('Quick access to all officer actions. All buttons are officer-only.')
-    .addFields(
-      {
-        name: '⚔️ Operations & Wars',
-        value:
-          '📋 Create an operation event\n' +
-          '🎓 Create a training event\n' +
-          '🎯 Start a kill count tracker\n' +
-          '⚔️ Post the activity check panel — **auto-schedules the 4-day rollover**',
-      },
-      {
-        name: '🎫 Tickets',
-        value: '🎫 Post the ticket panel in the verification channel',
-      },
-      {
-        name: '🔄 Rollover',
-        value: '⏳ Manually schedule the 4-day rollover\n✋ Cancel a pending rollover',
-      },
-      {
-        name: '⚙️ Config',
-        value: '⚙️ View current bot configuration for this server',
-      },
-    )
-    .setFooter({ text: 'Powered by Hypha' });
-}
-
-function buildPanelRows() {
-  const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('bp_operation')
-      .setLabel('Create Operation')
-      .setEmoji('📋')
-      .setStyle(ButtonStyle.Primary),
-
-    new ButtonBuilder()
-      .setCustomId('bp_training')
-      .setLabel('Create Training')
-      .setEmoji('🎓')
-      .setStyle(ButtonStyle.Primary),
-
-    new ButtonBuilder()
-      .setCustomId('bp_killcount')
-      .setLabel('Start Kill Count')
-      .setEmoji('🎯')
-      .setStyle(ButtonStyle.Primary),
-
-    new ButtonBuilder()
-      .setCustomId('bp_activemember')
-      .setLabel('Activity Check')
-      .setEmoji('⚔️')
-      .setStyle(ButtonStyle.Success),
-
-    new ButtonBuilder()
-      .setCustomId('bp_ticketpanel')
-      .setLabel('Ticket Panel')
-      .setEmoji('🎫')
-      .setStyle(ButtonStyle.Secondary),
-  );
-
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('bp_rollover_start')
-      .setLabel('Schedule Rollover')
-      .setEmoji('⏳')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId('bp_rollover_cancel')
-      .setLabel('Cancel Rollover')
-      .setEmoji('✋')
-      .setStyle(ButtonStyle.Danger),
-
-    new ButtonBuilder()
-      .setCustomId('bp_config_view')
-      .setLabel('View Config')
-      .setEmoji('⚙️')
-      .setStyle(ButtonStyle.Secondary),
-  );
-
-  return [row1, row2];
 }
 
 // ── Module export ─────────────────────────────────────────────────────────────
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('botpanel')
-    .setDescription('Post the officer control panel in the panel channel.')
+    .setDescription('Post the HUSS admin dashboard in a private channel.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .setDMPermission(false),
 
@@ -464,21 +382,22 @@ module.exports = {
       });
     }
 
-    if (interaction.channelId !== DEFAULT_PANEL_CHANNEL_ID) {
+    const panelChannelId = getConfig(interaction.guildId, 'ADMIN_PANEL_CHANNEL_ID');
+    if (panelChannelId && interaction.channelId !== panelChannelId) {
       return interaction.reply({
-        content: `❌ This command can only be used in <#${DEFAULT_PANEL_CHANNEL_ID}>.`,
+        content: `Post the admin dashboard in <#${panelChannelId}> or change Admin Panel Channel with /config.`,
         ephemeral: true,
       });
     }
 
-    await interaction.channel.send({
-      embeds: [buildPanelEmbed()],
-      components: buildPanelRows(),
-    });
+    if (interaction.channel.permissionsFor(interaction.guild.roles.everyone)?.has(PermissionFlagsBits.ViewChannel)) {
+      return interaction.reply({ content: 'Post this dashboard in a private officer channel. Deny View Channel for @everyone first.', ephemeral: true });
+    }
+    await interaction.deferReply({ ephemeral: true });
+    await interaction.channel.send(adminPanel.buildPage(interaction.guild));
 
-    return interaction.reply({
-      content: '✅ Officer control panel posted.',
-      ephemeral: true,
+    return interaction.editReply({
+      content: '✅ HUSS admin dashboard posted.',
     });
   },
 
@@ -492,6 +411,19 @@ module.exports = {
     }
 
     const action = interaction.customId;
+
+    if (action.startsWith('bp_page:') || action === 'bp_config_view') {
+      const [, page, offset] = action.split(':');
+      const payload = adminPanel.buildPage(interaction.guild, action === 'bp_config_view' ? 'settings' : page, Number(offset || 0));
+      if (interaction.message.flags?.has(64)) return interaction.update({ content: null, ...payload });
+      return interaction.reply({ ...payload, ephemeral: true });
+    }
+    if (action.startsWith('bp_setup:')) {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.reply({ content: 'Manage Server permission is required to edit settings.', ephemeral: true });
+      const modal = adminPanel.buildSettingsModal(interaction.guildId, action.split(':')[1]);
+      if (!modal) return interaction.reply({ content: 'Unknown settings form.', ephemeral: true });
+      return interaction.showModal(modal);
+    }
 
     // ── Create Operation ────────────────────────────────────────────────────
     if (action === 'bp_operation') {
@@ -541,6 +473,15 @@ module.exports = {
 
     // ── Schedule Rollover ───────────────────────────────────────────────────
     if (action === 'bp_rollover_start') {
+      return interaction.reply({
+        content: 'Schedule the rollover for four days from now? The rollover resets non-active members: eligible roles are removed and Unverified + Former Member are assigned. The rollover service applies its existing exemptions. Confirm only when the activity roster is ready.',
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('bp_rollover_confirm').setLabel('Confirm 4-day rollover').setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId('bp_page:war').setLabel('Back to war management').setStyle(ButtonStyle.Secondary),
+        )], ephemeral: true,
+      });
+    }
+    if (action === 'bp_rollover_confirm') {
       const store = readRolloverStore();
 
       if (store.guilds[interaction.guildId]) {
@@ -569,7 +510,7 @@ module.exports = {
         .setColor(0xF39C12)
         .setTitle('⏳ Rollover Scheduled')
         .setDescription(
-          `In **${ROLLOVER_DAYS} days**, all members with <@&${COLLIE_ROLE_ID}> will automatically be moved to <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`
+          `In **${ROLLOVER_DAYS} days**, the rollover service resets non-active members, applying its existing exemptions, and assigns <@&${UNVERIFIED_ROLE_ID}> and <@&${FORMER_MEMBER_ROLE_ID}>.`
         )
         .addFields({
           name: 'Executes at',
@@ -606,58 +547,12 @@ module.exports = {
       });
     }
 
-    // ── View Config ─────────────────────────────────────────────────────────
-    if (action === 'bp_config_view') {
-      const cfg = getAllConfig(interaction.guildId);
-
-      const keys = [
-        ['Welcome Channel', 'WELCOME_CHANNEL_ID'],
-        ['Verification Channel', 'VERIFICATION_CHANNEL_ID'],
-        ['Rules Channel', 'RULES_CHANNEL_ID'],
-        ['Leave Log Channel', 'LOG_CHANNEL_ID'],
-        ['Officer Channel', 'OFFICER_CHANNEL_ID'],
-        ['Ticket Category', 'TICKET_CATEGORY_ID'],
-        ['Ticket Log Channel', 'TICKET_LOG_CHANNEL_ID'],
-        ['Operations Channel', 'OPERATIONS_CHANNEL_ID'],
-        ['Trainings Channel', 'TRAININGS_CHANNEL_ID'],
-        ['Kill Count Channel', 'KILLCOUNT_CHANNEL_ID'],
-        ['Welcome Image URL', 'WELCOME_IMAGE_URL'],
-      ];
-
-      const fields = keys.map(([label, key]) => {
-        const val = cfg[key];
-
-        const display = val
-          ? key.endsWith('_CHANNEL_ID') || key.endsWith('_CATEGORY_ID')
-            ? `<#${val}>`
-            : val
-          : '*Not set*';
-
-        return {
-          name: label,
-          value: display,
-          inline: true,
-        };
-      });
-
-      const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setTitle(`⚙️ Bot Config — ${interaction.guild.name}`)
-        .addFields(fields)
-        .setFooter({
-          text: 'Use /config set-channel to update • Powered by Hypha',
-        })
-        .setTimestamp();
-
-      return interaction.reply({
-        embeds: [embed],
-        ephemeral: true,
-      });
-    }
   },
 
   // ── Modal submit handler ────────────────────────────────────────────────────
   async handleModal(interaction) {
+    if (!isOfficer(interaction.member)) return interaction.reply({ content: 'Only Officers and Commanders can use this panel.', ephemeral: true });
+    if (interaction.customId.startsWith('bp_setup_modal:')) return adminPanel.saveSettings(interaction, interaction.customId.split(':')[1]);
     // ── Kill count start ────────────────────────────────────────────────────
     if (interaction.customId === 'bp_kc_start_modal') {
       if (!isOfficer(interaction.member)) {
@@ -670,6 +565,10 @@ module.exports = {
       const name = interaction.fields.getTextInputValue('kc_war_name').trim();
 
       await interaction.deferReply({ ephemeral: true });
+
+      if (readKCStore().guilds[interaction.guildId]?.active) {
+        return interaction.editReply('A kill count tracker is already active. End it from its existing panel before starting another.');
+      }
 
       const channelId = getConfig(interaction.guildId, 'KILLCOUNT_CHANNEL_ID') ?? DEFAULT_KILLCOUNT_CHANNEL;
 
@@ -724,16 +623,16 @@ module.exports = {
       const channelId = raw.replace(/[<#>]/g, '').trim();
 
       const minutesRaw = interaction.fields.getTextInputValue('signup_minutes').trim();
+      // Older forms opened before a restart may not include this optional field.
+      const rolloverInput = interaction.fields.fields.get('signup_rollover')?.value?.trim().toUpperCase() || 'NO';
+      if (!['YES', 'NO'].includes(rolloverInput)) return interaction.reply({ content: 'Enter YES or NO for rollover scheduling.', ephemeral: true });
+      const scheduleRollover = rolloverInput === 'YES';
       let minutes = Number(minutesRaw);
 
-      if (!minutes || Number.isNaN(minutes) || minutes < 1) {
+      if (!minutesRaw) {
         minutes = DEFAULT_ACTIVITY_TIMER_MINUTES;
       }
-
-      // Limit to the configured maximum to avoid accidental huge timers.
-      if (minutes > DEFAULT_ACTIVITY_TIMER_MINUTES) {
-        minutes = DEFAULT_ACTIVITY_TIMER_MINUTES;
-      }
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > DEFAULT_ACTIVITY_TIMER_MINUTES) return interaction.reply({ content: `Timer must be a whole number from 1 to ${DEFAULT_ACTIVITY_TIMER_MINUTES} minutes.`, ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
 
@@ -752,6 +651,7 @@ module.exports = {
         embeds: [buildSignupEmbed(interaction.guild, endUnix)],
         components: [buildSignupRow(endUnix)],
       });
+      require('../utils/activity-store').register(activityMessage, interaction.guildId, endUnix);
 
       setTimeout(async () => {
         try {
@@ -770,24 +670,26 @@ module.exports = {
         }
       }, minutes * 60 * 1000);
 
-      // Automatically schedule the rollover whenever a war sign-up is posted
+      // Opt in explicitly; never replace an existing scheduled rollover.
       const rolloverStore = readRolloverStore();
       const executeAt = Date.now() + ROLLOVER_MS;
 
-      rolloverStore.guilds[interaction.guildId] = {
+      const existingRollover = rolloverStore.guilds[interaction.guildId];
+      if (scheduleRollover && !existingRollover) {
+        rolloverStore.guilds[interaction.guildId] = {
         executeAt,
         notifyChannelId: interaction.channelId,
         startedBy: interaction.user.id,
-      };
-
-      writeRolloverStore(rolloverStore);
+        };
+        writeRolloverStore(rolloverStore);
+      }
 
       const timestamp = Math.floor(executeAt / 1000);
 
       return interaction.editReply(
         `✅ Activity check posted in ${channel}.\n` +
         `⏳ Activity check closes <t:${endUnix}:R> (<t:${endUnix}:F>).\n` +
-        `⏳ Rollover automatically scheduled — executes <t:${timestamp}:R> (<t:${timestamp}:F>).`
+        (existingRollover ? 'Existing rollover schedule preserved.' : scheduleRollover ? `⏳ Rollover scheduled — executes <t:${timestamp}:R> (<t:${timestamp}:F>).` : 'No rollover scheduled by this activity check.')
       );
     }
   },

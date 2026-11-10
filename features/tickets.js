@@ -13,6 +13,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const { getConfig } = require('../utils/config');
+const verification = require('../utils/verification');
 
 const STORE_PATH   = path.join(__dirname, '..', 'data', 'tickets.json');
 const OFFICER_RANKS = ['Officer', 'Commander'];
@@ -85,6 +86,7 @@ function cleanupOldTranscripts(maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
 }
 
 function isRecruitmentOfficer(member) {
+  if (member.roles.cache.some(role => OFFICER_RANKS.includes(role.name))) return true;
   const recruitmentRoleId = getConfig(member.guild.id, 'RECRUITMENT_OFFICER_ROLE_ID');
   if (recruitmentRoleId) {
     return member.roles.cache.has(recruitmentRoleId);
@@ -142,11 +144,21 @@ function buildActionRow(channelId) {
 }
 
 // ── Open a new ticket ─────────────────────────────────────────────────────────
-async function openTicket(interaction, type) {
-  await interaction.deferReply({ ephemeral: true });
+const openingTickets = new Set();
+async function openTicket(interaction, type, options = {}) {
+  const key = `${interaction.guildId}:${options.user?.id || interaction.user.id}:${type}`;
+  if (openingTickets.has(key)) {
+    if (options.followup) throw new Error('A question ticket is already being created. Retry approval shortly.');
+    return interaction.reply({ content: 'Your ticket is already being created. Please wait.', ephemeral: true });
+  }
+  openingTickets.add(key);
+  try { return await openTicketUnlocked(interaction, type, options); }
+  finally { openingTickets.delete(key); }
+}
+async function openTicketUnlocked(interaction, type, { user = interaction.user, followup = false } = {}) {
+  if (!followup) await interaction.deferReply({ ephemeral: true });
 
   const guild   = interaction.guild;
-  const user    = interaction.user;
   const guildId = guild.id;
 
   // Prevent duplicate open tickets of the same type, but remove stale records for deleted channels
@@ -160,6 +172,7 @@ async function openTicket(interaction, type) {
     if (!existingChannel) {
       deleteTicket(guildId, existingChannelId);
     } else {
+      if (followup) return existingChannel;
       return interaction.editReply({ content: `You already have an open **${TICKET_TYPES[type].label}** ticket: <#${existingChannelId}>. Please use that one or ask a recruitment officer to close it first.` });
     }
   }
@@ -263,9 +276,11 @@ async function openTicket(interaction, type) {
     embeds: [
       new EmbedBuilder()
         .setColor(TICKET_COLOR)
-        .setTitle(`🎟️  Ticket Opened`)
+        .setTitle(followup ? '✅ Verification complete • Questions?' : '🎟️  Ticket Opened')
         .setDescription(
-          `> Welcome, <@${user.id}>! An officer will be with you shortly.\n` +
+          followup
+            ? `Welcome, <@${user.id}>! Your request was accepted. Use this private ticket for any additional questions.\nBienvenue ! Votre demande a été acceptée. Utilisez ce ticket privé pour toute question supplémentaire.`
+            : `> Welcome, <@${user.id}>! An officer will be with you shortly.\n` +
           `> *Bienvenue ! Un officier vous rejoindra très bientot.*`
         )
         .setFooter({ text: '⚔️ HUSS Ticket System' })
@@ -282,7 +297,14 @@ async function openTicket(interaction, type) {
     }
   }
 
-  await channel.send(messagePayload);
+  try {
+    await channel.send(messagePayload);
+  } catch (error) {
+    // Roll back an incomplete ticket so a retry can create a usable one.
+    await channel.delete();
+    deleteTicket(guildId, channel.id);
+    throw error;
+  }
 
   // Send context-specific instructions
   if (type === 'verify') {
@@ -354,166 +376,42 @@ async function openTicket(interaction, type) {
     }
   }
 
+  if (followup) return channel;
   await interaction.editReply({ content: `✅ Ticket created: ${channel}` });
 }
 
 // ── Close a ticket ────────────────────────────────────────────────────────────
+const closingTickets = new Set();
 async function closeTicket(interaction, channelId, reason) {
-  const ticket  = getTicket(interaction.guildId, channelId);
-  const channel = interaction.guild.channels.cache.get(channelId);
-
-  // Log the closure
-  const logChannelId = getConfig(interaction.guildId, 'TICKET_LOG_CHANNEL_ID');
-  if (logChannelId) {
-    const logChannel = interaction.guild.channels.cache.get(logChannelId);
-    if (logChannel && ticket) {
-      const type = TICKET_TYPES[ticket.type]   ?? { label: 'Unknown', emoji: '🎫' };
-      const logEmbed = new EmbedBuilder()
-        .setColor(0x95A5A6)
-        .setTitle('🔒  Ticket Closed')
-        .setDescription(`> **${type.emoji} ${type.label}** ticket from <@${ticket.userId}>`)
-        .addFields(
-          { name: '📁  Channel',    value: channel?.name ?? channelId,                                     inline: true },
-          { name: '👤  Opened by',  value: `<@${ticket.userId}>`,                                           inline: true },
-          { name: '🔖  Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '*Unclaimed*',   inline: true },
-          { name: '🔒  Closed by',  value: `<@${interaction.user.id}>`,                                    inline: true },
-          { name: '📝  Reason',     value: reason ?? '*No reason provided*',                               inline: true },
-        )
-        .setFooter({ text: '⚔️ HUSS Ticket System' })
-        .setTimestamp();
-
-      const transcriptFilename = `ticket-${interaction.guildId}-${channelId}-${Date.now()}.html`;
-      let htmlContent = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ticket Transcript - ${channel?.name ?? channelId}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #36393f; color: #dcddde; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-    .header { background: #2f3136; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-    .header h1 { color: #fff; font-size: 24px; margin-bottom: 8px; }
-    .header-info { font-size: 13px; color: #b9bbbe; line-height: 1.8; }
-    .info-row { display: flex; gap: 20px; margin-top: 10px; }
-    .info-item { display: flex; flex-direction: column; }
-    .info-label { color: #72767d; font-size: 12px; text-transform: uppercase; }
-    .info-value { color: #fff; font-size: 14px; margin-top: 4px; }
-    .messages { background: #36393f; border-radius: 8px; padding: 20px; }
-    .message { padding: 8px 0; border-bottom: 1px solid rgba(79, 84, 92, 0.4); }
-    .message:last-child { border-bottom: none; }
-    .message-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
-    .message-author { color: #fff; font-weight: 600; font-size: 15px; }
-    .message-time { color: #72767d; font-size: 12px; }
-    .message-content { color: #dcddde; margin-left: 36px; word-wrap: break-word; }
-    .embed { background: rgba(79, 84, 92, 0.3); border-left: 4px solid #7289da; border-radius: 4px; padding: 8px 12px; margin-left: 36px; margin-top: 4px; font-size: 13px; }
-    .embed-title { font-weight: 600; color: #fff; }
-    .embed-desc { color: #b9bbbe; margin-top: 4px; }
-    .attachments { margin-left: 36px; margin-top: 4px; }
-    .attachment-link { color: #0096cf; text-decoration: none; font-size: 13px; display: inline-block; margin-right: 12px; }
-    .attachment-link:hover { text-decoration: underline; }
-    .divider { height: 1px; background: rgba(79, 84, 92, 0.5); margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1># ${channel?.name ?? channelId}</h1>
-      <div class="header-info">
-        <div class="info-row">
-          <div class="info-item">
-            <span class="info-label">Opened by</span>
-            <span class="info-value">&lt;@${ticket.userId}&gt;</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Type</span>
-            <span class="info-value">${type.emoji} ${type.label}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Closed by</span>
-            <span class="info-value">${interaction.user.tag}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Reason</span>
-            <span class="info-value">${reason ?? 'No reason provided'}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div class="messages">`;
-
-      if (channel) {
-        const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
-        if (messages) {
-          const ordered = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-          for (const msg of ordered) {
-            const author = msg.author?.tag ?? 'Unknown';
-            const timestamp = new Date(msg.createdTimestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            htmlContent += `<div class="message"><div class="message-header"><span class="message-author">${author}</span><span class="message-time">${timestamp}</span></div>`;
-            if (msg.content) {
-              htmlContent += `<div class="message-content">${msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
-            }
-            if (msg.embeds.length) {
-              for (const embed of msg.embeds) {
-                htmlContent += `<div class="embed"><div class="embed-title">${embed.title || 'Embed'}</div>`;
-                if (embed.description) {
-                  htmlContent += `<div class="embed-desc">${embed.description}</div>`;
-                }
-                htmlContent += `</div>`;
-              }
-            }
-            if (msg.attachments.size) {
-              htmlContent += `<div class="attachments">`;
-              for (const attachment of msg.attachments.values()) {
-                htmlContent += `<a class="attachment-link" href="${attachment.url}" target="_blank">${attachment.name}</a>`;
-              }
-              htmlContent += `</div>`;
-            }
-            htmlContent += `</div>`;
-          }
-        }
-      }
-
-      htmlContent += `
-    </div>
-  </div>
-</body>
-</html>`;
-
-      writeTranscript(transcriptFilename, htmlContent);
-      cleanupOldTranscripts();
-
-      await logChannel.send({ embeds: [logEmbed], files: [{ attachment: path.join(TRANSCRIPT_DIR, transcriptFilename), name: transcriptFilename }] }).catch(() => {});
+  if (closingTickets.has(channelId)) return;
+  closingTickets.add(channelId);
+  try {
+    const ticket = getTicket(interaction.guildId, channelId);
+    if (!ticket) throw new Error('This ticket no longer exists.');
+    if (interaction.user.id !== ticket.userId && !isRecruitmentOfficer(interaction.member)) throw new Error('Only the ticket owner or officers can close it.');
+    const channel = await interaction.guild.channels.fetch(channelId);
+    const html = await require('../utils/ticket-transcript').buildTranscript(channel, ticket, interaction.user.tag, reason);
+    const filename = 'ticket-' + interaction.guildId + '-' + channelId + '-' + Date.now() + '.html';
+    writeTranscript(filename, html);
+    const logId = getConfig(interaction.guildId, 'TICKET_LOG_CHANNEL_ID');
+    if (logId) {
+      const log = await interaction.guild.channels.fetch(logId);
+      await log.send({ content: 'Ticket closed: ' + channel.name + '. Reason: ' + (reason || 'Not provided'), files: [{ attachment: path.join(TRANSCRIPT_DIR, filename), name: filename }], allowedMentions: { parse: [] } });
     }
-  }
-
-  deleteTicket(interaction.guildId, channelId);
-
-  if (channel) {
-    if (reason) {
-      await channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x95A5A6)
-            .setTitle('🔒  Ticket Closed')
-            .setDescription(
-              `> Closed by <@${interaction.user.id}>\n` +
-              `> **Reason:** ${reason}`
-            )
-            .setFooter({ text: '⚔️ HUSS Ticket System' })
-            .setTimestamp(),
-        ],
-      }).catch(() => {});
-      await new Promise(r => setTimeout(r, 3000));
-    }
-    await channel.delete().catch(() => {});
-  }
+    await channel.delete('Ticket closed by ' + interaction.user.id);
+    deleteTicket(interaction.guildId, channelId);
+    require('../utils/audit').record(interaction, 'ticket.closed', ticket.userId, { reason, channelId });
+    cleanupOldTranscripts();
+  } finally { closingTickets.delete(channelId); }
 }
 
 // ── Module export ─────────────────────────────────────────────────────────────
 module.exports = {
+  init: verification.init,
+  async createFollowupTicket(interaction, userId) {
+    const user = await interaction.client.users.fetch(userId);
+    return openTicket(interaction, 'officer', { user, followup: true });
+  },
   // /ticketpanel — posts the public sign-up panel
   data: new SlashCommandBuilder()
     .setName('ticketpanel')
@@ -526,12 +424,13 @@ module.exports = {
       .setColor(0xE74C3C)
       .setTitle('🎟️  Support & Verification')
       .setDescription(
-        '> Select a category below to open a **private ticket** with our officers.\n' +
-        '> *Sélectionnez une catégorie ci-dessous pour ouvrir un **ticket privé** avec nos officiers.*'
+        '**Verification & allies:** start here, send your F1 screenshot by **DM**, then receive an officer’s decision.\n' +
+        '*Vérification et alliés : commencez ici, envoyez votre capture F1 en **MP**, puis recevez la décision d’un officier.*\n\n' +
+        '**Officer questions** open a private server ticket. / Les questions ouvrent un ticket privé sur le serveur.'
       )
       .addFields(
-        { name: '✅  Verification',     value: 'Become a verified HUSS member.\n*Devenez un membre vérifié de HUSS.*' },
-        { name: '🤝  Ally Request',     value: 'Request a formal alliance with us.\n*Demandez une alliance formelle avec nous.*' },
+        { name: '✅  Verification',     value: 'Send your F1 screenshot by DM to join HUSS.\n*Envoyez votre capture F1 en MP pour rejoindre HUSS.*' },
+        { name: '🤝  Ally Request',     value: 'Send your F1 screenshot and clan name by DM.\n*Envoyez votre capture F1 et le nom de votre clan en MP.*' },
         { name: '🎖️  Officer Question', value: 'Ask the officer team something privately.\n*Posez une question privée aux officiers.*' },
       )
       .setFooter({ text: '⚔️ HUSS Command' })
@@ -561,8 +460,12 @@ module.exports = {
   async handleButton(interaction) {
     const [action, param] = interaction.customId.split(':');
 
+    if (action.startsWith('ticket_review_')) return verification.handleReview(interaction);
+
     // Panel buttons — open a new ticket
     if (action === 'ticket_open') {
+      if (param === 'verify' || param === 'ally') return verification.start(interaction, param);
+      if (!TICKET_TYPES[param]) return interaction.reply({ content: 'Unknown ticket type.', ephemeral: true });
       return openTicket(interaction, param);
     }
 
@@ -577,6 +480,7 @@ module.exports = {
       if (!isRecruitmentOfficer(interaction.member)) {
         return interaction.reply({ content: 'Only recruitment officers can claim tickets.', ephemeral: true });
       }
+      if (ticket.claimedBy && ticket.claimedBy !== interaction.user.id) return interaction.reply({ content: `This ticket is already claimed by <@${ticket.claimedBy}>.`, ephemeral: true });
       ticket.claimedBy = interaction.user.id;
       saveTicket(interaction.guildId, channelId, ticket);
 
@@ -591,12 +495,17 @@ module.exports = {
 
     // Close
     if (action === 'ticket_close') {
-      await interaction.reply({ content: '🔒 Closing ticket...', ephemeral: true });
+      if (interaction.user.id !== ticket.userId && !isRecruitmentOfficer(interaction.member)) return interaction.reply({ content: 'Only the owner or officers can close this ticket.', ephemeral: true });
+      return interaction.reply({ content: 'Close this ticket? A transcript will be saved before the channel is deleted.', components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`ticket_confirm_close:${channelId}`).setLabel('Confirm close').setStyle(ButtonStyle.Danger))], ephemeral: true });
+    }
+    if (action === 'ticket_confirm_close') {
+      await interaction.reply({ content: 'Saving transcript and closing ticket…', ephemeral: true });
       return closeTicket(interaction, channelId);
     }
 
     // Close with Reason — open modal
     if (action === 'ticket_closereason') {
+      if (interaction.user.id !== ticket.userId && !isRecruitmentOfficer(interaction.member)) return interaction.reply({ content: 'Only the owner or officers can close this ticket.', ephemeral: true });
       const modal = new ModalBuilder()
         .setCustomId(`ticket_close_modal:${channelId}`)
         .setTitle('Close Ticket with Reason');
@@ -621,6 +530,8 @@ module.exports = {
   // ── Modal submit interactions ───────────────────────────────────────────────
   async handleModal(interaction) {
     const [action, channelId] = interaction.customId.split(':');
+
+    if (action.startsWith('ticket_review_')) return verification.handleReview(interaction);
 
     if (action === 'ticket_close_modal') {
       const reason = interaction.fields.getTextInputValue('reason');

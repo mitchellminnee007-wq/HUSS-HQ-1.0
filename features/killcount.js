@@ -12,6 +12,8 @@ const {
   PermissionFlagsBits,
 } = require('discord.js');
 const { getConfig } = require('../utils/config');
+const audit = require('../utils/audit');
+const commandLocks = new Set();
 
 const STORE_PATH               = path.join(__dirname, '..', 'data', 'killcount.json');
 const DEFAULT_KILLCOUNT_CHANNEL = '1445348388324507688';
@@ -151,6 +153,10 @@ function saveActive(guildId, data) {
 
 function clearActive(guildId) {
   const store = readStore();
+  if (store.guilds[guildId]?.active) {
+    store.guilds[guildId].history ??= [];
+    store.guilds[guildId].history.push({ ...store.guilds[guildId].active, endedAt: Date.now() });
+  }
   if (store.guilds[guildId]) delete store.guilds[guildId].active;
   writeStore(store);
 }
@@ -261,8 +267,8 @@ function buildEmbed(war, ended = false) {
     .setTitle(ended ? `📜 Battle Report — ${war.name}` : `⚔️  Kill Count — ${war.name}`)
     .setDescription(statusLine)
     .addFields(
-      { name: '🏆 Leaderboard',         value: board                    },
-      { name: '📋 Recent Submissions',  value: submissions              },
+      { name: '🏆 Leaderboard',         value: board.slice(0, 1024)                    },
+      { name: '📋 Recent Submissions',  value: submissions.slice(0, 1024)              },
       { name: '💀 Total Kills',         value: `\`${total}\``,         inline: true },
       { name: '🪖 Combatants',          value: `\`${combatants}\``,    inline: true },
       { name: '⏱️ Duration',            value: `\`${duration}\``,      inline: true },
@@ -338,7 +344,7 @@ module.exports = {
           opt.setName('amount')
             .setDescription('Number of kills to add')
             .setRequired(true)
-            .setMinValue(1)
+            .setMinValue(1).setMaxValue(100000)
         )
     )
 
@@ -366,7 +372,7 @@ module.exports = {
           opt.setName('amount')
             .setDescription('Exact amount from that submission (optional)')
             .setRequired(false)
-            .setMinValue(1)
+            .setMinValue(1).setMaxValue(100000)
         )
     )
 
@@ -374,6 +380,7 @@ module.exports = {
     .addSubcommand(sub =>
       sub.setName('reset')
         .setDescription('Reset all kills to 0 for the current war. (Officers only)')
+        .addBooleanOption(option => option.setName('confirm').setDescription('Confirm resetting all kill submissions').setRequired(true))
     )
 
     // /killcount end
@@ -383,11 +390,18 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    if (commandLocks.has(interaction.guildId)) return interaction.reply({ content: 'Another kill count action is processing. Please retry shortly.', ephemeral: true });
+    commandLocks.add(interaction.guildId);
+    try { return await module.exports.executeUnlocked(interaction); }
+    finally { commandLocks.delete(interaction.guildId); }
+  },
+  async executeUnlocked(interaction) {
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 
     // ── /killcount start ───────────────────────────────────────────────────
     if (sub === 'start') {
+      if (getActive(guildId)) return interaction.reply({ content: 'A war is already active. End it before starting another.', ephemeral: true });
       if (!isOfficer(interaction.member)) {
         return interaction.reply({ content: 'Only Officers and Commanders can start a war.', ephemeral: true });
       }
@@ -540,10 +554,12 @@ module.exports = {
         return interaction.reply({ content: 'Only Officers and Commanders can reset the kill count.', ephemeral: true });
       }
 
+      if (!interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'Reset cancelled. No kills changed.', ephemeral: true });
       const war = getActive(guildId);
       if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
 
       war.kills = [];
+      audit.record(interaction, 'killcount.reset', war.messageId, { war: war.name });
       saveActive(guildId, war);
       await refreshPanel(interaction.guild, war);
       return interaction.reply({ content: '✅ Kill count has been reset to 0.', ephemeral: true });
@@ -579,6 +595,7 @@ module.exports = {
     const [action, msgId] = interaction.customId.split(':');
     const war = getActive(interaction.guildId);
     if (!war) return interaction.reply({ content: 'No active war.', ephemeral: true });
+    if (war.messageId !== msgId) return interaction.reply({ content: 'This panel belongs to an older war. Use the current kill count panel.', ephemeral: true });
 
     if (action === 'kc_add') {
       if (!canAddKills(interaction.member)) {
@@ -599,10 +616,15 @@ module.exports = {
     }
 
     if (action === 'kc_reset') {
+      if (!isOfficer(interaction.member)) return interaction.reply({ content: 'Only Officers and Commanders can reset the kill count.', ephemeral: true });
+      return interaction.reply({ content: 'Reset every kill submission for this war?', components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`kc_confirm_reset:${msgId}`).setLabel('Confirm reset').setStyle(ButtonStyle.Danger))], ephemeral: true });
+    }
+    if (action === 'kc_confirm_reset') {
       if (!isOfficer(interaction.member)) {
         return interaction.reply({ content: 'Only Officers and Commanders can reset the kill count.', ephemeral: true });
       }
       war.kills = [];
+      audit.record(interaction, 'killcount.reset', war.messageId, { war: war.name });
       saveActive(interaction.guildId, war);
       await refreshPanel(interaction.guild, war);
       return interaction.reply({ content: '✅ Kill count has been reset to 0.', ephemeral: true });
@@ -646,6 +668,9 @@ module.exports = {
   // ── Modal submit interactions ──────────────────────────────────────────────────
   async handleModal(interaction) {
     const [action, msgId] = interaction.customId.split(':');
+    const currentWar = getActive(interaction.guildId);
+    if (!currentWar || currentWar.messageId !== msgId) return interaction.reply({ content: 'This form belongs to an older war. Use the current kill count panel.', ephemeral: true });
+    if (action === 'kc_add_modal' && !canAddKills(interaction.member)) return interaction.reply({ content: 'Only Officers, Commanders and Members can add kills.', ephemeral: true });
 
     if (action === 'kc_add_modal') {
       const war = getActive(interaction.guildId);
@@ -653,9 +678,9 @@ module.exports = {
 
       const resolved = resolveVehicleInput(interaction.fields.getTextInputValue('name'));
       const amountStr = interaction.fields.getTextInputValue('amount').trim();
-      const amount = parseInt(amountStr, 10);
+      const amount = Number(amountStr);
 
-      if (isNaN(amount) || amount < 1) {
+      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
         return interaction.reply({ content: '❌ Please enter a valid number of kills (minimum 1).', ephemeral: true });
       }
 

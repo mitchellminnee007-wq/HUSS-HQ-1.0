@@ -51,11 +51,18 @@ function getAllConfig(guildId) {
   const store = readStore();
   const guildConfig = store.guilds[guildId] || {};
   const keys = [
+    'ADMIN_PANEL_CHANNEL_ID',
+    'TRAINER_ROLE_ID',
+    'LOGISTICS_ROLE_ID',
+    'LOGISTICS_TEST_FORUM_ID',
     'WELCOME_CHANNEL_ID',
     'VERIFICATION_CHANNEL_ID',
     'RULES_CHANNEL_ID',
     'LOG_CHANNEL_ID',
     'OFFICER_CHANNEL_ID',
+    'VERIFICATION_REVIEW_CHANNEL_ID',
+    'VERIFIED_MEMBER_ROLE_ID',
+    'CADET_ROLE_ID',
     'RECRUITMENT_OFFICER_ROLE_ID',
     'TICKET_CATEGORY_ID',
     'TICKET_LOG_CHANNEL_ID',
@@ -73,6 +80,7 @@ function getAllConfig(guildId) {
     'WELCOME_IMAGE_URL'
   ];
   const result = {};
+  for (const key of Object.keys(guildConfig)) if (key.startsWith('QUALIFICATION_')) keys.push(key);
   for (const key of keys) {
     result[key] = guildConfig[key] || cleanEnvValue(process.env[key]) || null;
   }

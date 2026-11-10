@@ -6,6 +6,7 @@ const {
   ButtonStyle
 } = require('discord.js');
 const { getConfig } = require('../utils/config');
+const activityStore = require('../utils/activity-store');
 
 const DEFAULT_ACTIVITY_ROLE_ID = '1424722021325082625';
 const OFFICER_RANKS = ['Officer', 'Commander'];
@@ -47,6 +48,7 @@ function buildActivityRow(endUnix, disabled = false, cancelled = false) {
 }
 
 module.exports = {
+  init: activityStore.init,
   data: new SlashCommandBuilder()
     .setName('activitycheck')
     .setDescription('Post an activity check panel so members can mark themselves active.')
@@ -94,6 +96,7 @@ module.exports = {
       components: [row],
       fetchReply: true
     });
+    activityStore.register(message, interaction.guildId, endUnix);
 
     setTimeout(async () => {
       try {
@@ -124,14 +127,17 @@ module.exports = {
   resetData: new SlashCommandBuilder()
     .setName('clearactivitycheck')
     .setDescription('Remove all members from the activity check roster.')
+    .addBooleanOption(option => option.setName('confirm').setDescription('Confirm clearing the active roster').setRequired(true))
     .setDMPermission(false),
 
   statusData: new SlashCommandBuilder()
     .setName('activitycheckroster')
     .setDescription('Shows how many members are marked active for the current activity check.')
+    .addIntegerOption(option => option.setName('page').setDescription('Roster page').setMinValue(1).setRequired(false))
     .setDMPermission(false),
 
   async executeReset(interaction) {
+    if (!interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'Roster reset cancelled.', ephemeral: true });
     try {
       if (!isOfficer(interaction.member)) {
         return interaction.reply({
@@ -197,8 +203,10 @@ module.exports = {
       const members = getActivityMembers(guild, role.id);
       const count = members.size;
 
+      const pageCount = Math.max(1, Math.ceil(count / 20));
+      const page = Math.min(interaction.options.getInteger('page') || 1, pageCount);
       const memberList = count
-        ? members.map(member => `- ${member.displayName}`).join('\n')
+        ? [...members.values()].slice((page - 1) * 20, page * 20).map(member => `- ${member.displayName}`).join('\n')
         : 'No active members yet. The banner is raised, but nobody has marked active.';
 
       const embed = new EmbedBuilder()
@@ -208,7 +216,7 @@ module.exports = {
           ? 'Members marked active for the current activity check:'
           : 'No one has marked active for this check yet.')
         .addFields({
-          name: `Active (${count})`,
+          name: `Active (${count}) • Page ${page}/${pageCount}`,
           value: memberList.length > 1024 ? memberList.slice(0, 1021) + '...' : memberList
         })
         .setFooter({ text: `Role: ${role.name} • Powered by Hypha` })
@@ -273,6 +281,7 @@ module.exports = {
         embeds: [cancelledEmbed],
         components: [buildActivityRow(endUnix, true, true)]
       });
+      activityStore.forget(interaction.message.id);
 
       return interaction.reply({
         content: '✅ Activity check has been **cancelled**.',

@@ -1,18 +1,19 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const audit = require('../utils/audit');
 
-const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
-const highestOfficerDemoteIndex = ranks.indexOf('Dragoon');
+const { ranks, matchesRank } = require('../utils/ranks');
+const highestOfficerDemoteIndex = ranks.indexOf('Hussar');
 
 function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => role.name === rank)) || null;
+  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
 }
 
 function getRankRole(guild, rank) {
-  return guild.roles.cache.find(role => role.name === rank) || null;
+  return guild.roles.cache.find(role => matchesRank(role, rank)) || null;
 }
 
 function getMemberRankRoles(member) {
-  return ranks.filter(rank => member.roles.cache.some(role => role.name === rank));
+  return ranks.filter(rank => member.roles.cache.some(role => matchesRank(role, rank)));
 }
 
 function canAffectRank(executorRank, targetRank) {
@@ -32,6 +33,7 @@ module.exports = {
         .setDescription('The member to demote')
         .setRequired(true)
     )
+    .addStringOption(option => option.setName('reason').setDescription('Reason for the demotion').setMaxLength(500).setRequired(false))
     .setDMPermission(false),
 
   async execute(interaction) {
@@ -65,7 +67,7 @@ module.exports = {
     }
 
     if (executorRank === 'Officer' && currentIndex > highestOfficerDemoteIndex) {
-      return interaction.reply({ content: 'Officers can only demote members up to Dragoon.', ephemeral: true });
+      return interaction.reply({ content: 'Officers can only demote members up to Hussar.', ephemeral: true });
     }
 
     const previousRank = ranks[currentIndex - 1];
@@ -73,6 +75,7 @@ module.exports = {
     if (!previousRole) {
       return interaction.reply({ content: `The rank role "${previousRank}" does not exist on this server.`, ephemeral: true });
     }
+    if (previousRole.editable === false || target.roles.cache.some(role => ranks.some(rank => matchesRank(role, rank)) && role.editable === false)) return interaction.reply({ content: 'The bot cannot manage these ranks. Check its role hierarchy and Manage Roles permission.', ephemeral: true });
 
     const rolesToRemove = getMemberRankRoles(target)
       .map(rank => getRankRole(interaction.guild, rank))
@@ -95,6 +98,7 @@ module.exports = {
       .setFooter({ text: `Demoted by ${executor.user.tag}` })
       .setTimestamp();
 
+    audit.record(interaction, 'member.demoted', target.id, { from: targetRank, to: previousRank, reason: interaction.options.getString('reason') });
     await interaction.reply({
       content: `${target}`,
       embeds: [embed],

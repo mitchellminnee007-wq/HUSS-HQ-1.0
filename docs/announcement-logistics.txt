@@ -1,0 +1,16 @@
+HUSS HQ — Logistics & Command Update
+
+Stockpiles and logistics orders are now available!
+
+• Track public and reserve stockpiles, counted inventory, reserved stock and reported expiry timers with /stockpile.
+• Create production, transport and frontline supply orders with /order. Claim work, record pickups, make partial deliveries and return unused goods.
+• Reserve access codes are restricted to logistics staff. Inventory and timers are manually reported — the bot does not read or control Foxhole stockpiles.
+• Find the new Logistics overview in /botpanel.
+
+Command improvements:
+• Only Officers and Commanders can promote: Officers up to Hussar, Commanders up to Officer.
+• One eligible warning expires automatically after 30 days, with a 30-day interval between removals. Officer voting has been retired.
+• New tools: /memberinfo, /setup-check, /certify, /warreport and /auditlog.
+• Safer resets, persistent activity-check deadlines, full paginated ticket transcripts and improved event forms.
+
+Use /order list to find logistics work. Ask an Officer if you need help getting started.

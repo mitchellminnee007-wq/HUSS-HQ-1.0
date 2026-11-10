@@ -1,19 +1,20 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getConfig } = require('../utils/config.js');
+const audit = require('../utils/audit');
 
-const ranks = ['Cadet', 'Private', 'Legionaire', 'Dragoon', 'Hussar', 'Officer', 'Commander'];
+const { ranks, matchesRank } = require('../utils/ranks');
 
 function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => role.name === rank)) || null;
+  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
 }
 
 function getRoleByName(guild, roleName) {
   const normalized = roleName.toLowerCase();
-  return guild.roles.cache.find(role => role.name.toLowerCase() === normalized) || null;
+  return guild.roles.cache.find(role => role.name.toLowerCase() === normalized || matchesRank(role, roleName)) || null;
 }
 
 function getMemberRankRoles(member) {
-  return ranks.filter(rank => member.roles.cache.some(role => role.name === rank));
+  return ranks.filter(rank => member.roles.cache.some(role => matchesRank(role, rank)));
 }
 
 function canAffectRank(executorRank, targetRank) {
@@ -33,9 +34,12 @@ module.exports = {
         .setDescription('The member to discharge')
         .setRequired(true)
     )
+    .addStringOption(option => option.setName('reason').setDescription('Reason for the discharge').setMaxLength(500).setRequired(true))
+    .addBooleanOption(option => option.setName('confirm').setDescription('Confirm removing the member and rank roles').setRequired(true))
     .setDMPermission(false),
 
   async execute(interaction) {
+    if (!interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'Discharge cancelled. No roles changed.', ephemeral: true });
     const target = interaction.options.getMember('user', true);
     if (!target || !target.guild) {
       return interaction.reply({ content: 'That member is not available.', ephemeral: true });
@@ -74,6 +78,8 @@ module.exports = {
       return interaction.reply({ content: 'That member is already discharged.', ephemeral: true });
     }
 
+    if ([...rolesToRemove, unverifiedRole, formerMemberRole].filter(Boolean).some(role => role.editable === false)) return interaction.reply({ content: 'The bot cannot manage all required roles. Move its role above them before discharging this member.', ephemeral: true });
+
     if (rolesToRemove.length) {
       await target.roles.remove(rolesToRemove);
     }
@@ -105,6 +111,7 @@ module.exports = {
       .setFooter({ text: `Discharged by ${executor.user.tag}` })
       .setTimestamp();
 
+    audit.record(interaction, 'member.discharged', target.id, { from: targetRank, reason: interaction.options.getString('reason') });
     await interaction.reply({
       content: `${target}`,
       embeds: [embed],

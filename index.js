@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits, Events, ActivityType } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Events, ActivityType, Partials } = require('discord.js');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -18,7 +18,9 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-  ]
+    GatewayIntentBits.DirectMessages,
+  ],
+  partials: [Partials.Channel],
 });
 client.commands = new Collection();
 
@@ -73,9 +75,6 @@ for (const dir of commandDirs) {
           execute: command.executeRun
         });
       }
-      if (typeof command.init === 'function') {
-        command.init(client);
-      }
     }
   }
 }
@@ -86,6 +85,34 @@ client.once(Events.ClientReady, () => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+  if (interaction.isAutocomplete()) {
+    const command = client.commands.get(interaction.commandName);
+    try { if (command?.autocomplete) await command.autocomplete(interaction); else await interaction.respond([]); }
+    catch (error) { console.error('Autocomplete failed:', error); if (!interaction.responded) await interaction.respond([]).catch(() => {}); }
+    return;
+  }
+  if ((interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('ord_')) {
+    const command = client.commands.get('order');
+    try { await command[interaction.isButton() ? 'handleButton' : interaction.isStringSelectMenu() ? 'handleSelect' : 'handleModal'](interaction); }
+    catch (error) {
+      console.error('Order panel failed:', error.message);
+      const payload = { content: 'Could not complete the order action. Refresh the panel and try again.', ephemeral: true };
+      if (interaction.deferred || interaction.replied) await interaction.followUp(payload).catch(() => {});
+      else await interaction.reply(payload).catch(() => {});
+    }
+    return;
+  }
+  if ((interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('sp_')) {
+    const command = client.commands.get('stockpile');
+    try { await command[interaction.isButton() ? 'handleButton' : interaction.isStringSelectMenu() ? 'handleSelect' : 'handleModal'](interaction); }
+    catch (error) {
+      console.error('Stockpile import failed:', error.message);
+      const payload = { content: 'The import could not be completed. Please reopen the stockpile and try again.', ephemeral: true };
+      if (interaction.deferred || interaction.replied) await interaction.followUp(payload).catch(() => {});
+      else await interaction.reply(payload).catch(() => {});
+    }
+    return;
+  }
   if (interaction.isButton()) {
     const [handlerName] = interaction.customId.split(':');
 
