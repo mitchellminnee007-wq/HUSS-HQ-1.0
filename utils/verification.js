@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder,
@@ -9,7 +9,7 @@ const STORE = path.join(__dirname, '..', 'data', 'verification-requests.json');
 const locks = new Set();
 const initializedClients = new WeakSet();
 const types = { verify: 'Member verification / Vérification membre', ally: 'Ally verification / Vérification allié' };
-const active = request => request.status === 'pending' || (request.status === 'awaiting' && Date.now() - request.createdAt < 86400000);
+const active = request => request.status === 'pending' || (request.status === 'awaiting' && (request.ticketChannelId || Date.now() - request.createdAt < 86400000));
 function read() {
   if (!fs.existsSync(STORE)) return {};
   return JSON.parse(fs.readFileSync(STORE, 'utf8'));
@@ -29,10 +29,10 @@ async function locked(key, fn, busy) {
 function canReview(member) {
   const roleId = getConfig(member.guild.id, 'RECRUITMENT_OFFICER_ROLE_ID');
   return member.permissions.has(PermissionFlagsBits.ManageGuild)
-    || member.roles.cache.some(role => ['Officer', 'Commander'].includes(role.name) || (roleId ? role.id === roleId : role.name === 'Recruitment Officer'));
+    || (require('./ranks').isOfficer(member) || require('./ranks').hasConfiguredRole(member,'RECRUITMENT_OFFICER_ROLE_ID','Recruitment Officer'));
 }
-async function reviewChannel(guild) {
-  const id = getConfig(guild.id, 'VERIFICATION_REVIEW_CHANNEL_ID') || getConfig(guild.id, 'OFFICER_CHANNEL_ID');
+async function reviewChannel(guild, ticketChannelId) {
+  const id = ticketChannelId || getConfig(guild.id, 'VERIFICATION_REVIEW_CHANNEL_ID') || getConfig(guild.id, 'OFFICER_CHANNEL_ID');
   const channel = id && await guild.channels.fetch(id);
   if (!channel || channel.type !== ChannelType.GuildText) throw new Error('Configure a private verification review channel with /config set-channel.');
   if (channel.permissionsFor(guild.roles.everyone)?.has(PermissionFlagsBits.ViewChannel)) {
@@ -66,45 +66,48 @@ async function start(interaction, type) {
   if (!interaction.guild || !types[type]) return;
   await interaction.deferReply({ ephemeral: true });
   return locked(`user:${interaction.user.id}`, async () => {
-    const existing = Object.values(read()).find(request => request.userId === interaction.user.id && active(request));
-    if (existing) {
-      return interaction.editReply({ content: existing.status === 'pending'
-        ? 'Your screenshot is awaiting officer review. / Votre capture attend la décision d’un officier.'
-        : `You already have a DM request for **${existing.guildName}**. Send your screenshot to the bot, or type **cancel** in DM to restart. / Envoyez votre capture au bot ou écrivez **cancel** en MP.` });
+    const existing = Object.values(read()).find(r => r.guildId === interaction.guildId && r.userId === interaction.user.id && active(r));
+    if (existing?.ticketChannelId) {
+      const channel = await interaction.guild.channels.fetch(existing.ticketChannelId).catch(() => null);
+      if (channel) return interaction.editReply({content: `Use your private ticket: <#${channel.id}>. Post your F1 screenshot there. / Utilisez votre ticket privé pour envoyer votre capture F1.`});
+      existing.status = 'cancelled'; save(existing);
+    } else if (existing?.status === 'pending') {
+      return interaction.editReply({content:'Your previous screenshot is already awaiting officer review. / Votre capture attend déjà la décision d’un officier.'});
     }
     try {
-      const channel = await reviewChannel(interaction.guild);
-      const request = { id: randomUUID(), guildId: interaction.guildId, guildName: interaction.guild.name,
-        reviewChannelId: channel.id, userId: interaction.user.id, type, status: 'awaiting', createdAt: Date.now() };
-      const screenshot = path.join(__dirname, '..', 'Supporting things', 'F1Screenshot.png');
-      const embed = new EmbedBuilder().setColor(0x5865F2).setTitle(types[type])
-        .setDescription(`**${interaction.guild.name}**\nSend one screenshot of your **F1 in-game stats** here as an image attachment (PNG, JPG or WebP, max. 8 MB).${type === 'ally' ? ' Include your clan/group name in the same message.' : ''}\n\nEnvoyez ici une capture de vos **statistiques F1 en jeu** en pièce jointe (PNG, JPG ou WebP, max. 8 Mo).${type === 'ally' ? ' Ajoutez le nom de votre clan/groupe dans le même message.' : ''}\n\nAn officer will review it privately on the server. / Un officier examinera votre demande sur le serveur.\n\nType **cancel** to cancel. This upload session expires after 24 hours.\nÉcrivez **cancel** pour annuler. Cette session expire après 24 heures.`);
-      const payload = { embeds: [embed], allowedMentions: { parse: [] } };
-      if (fs.existsSync(screenshot)) {
-        embed.setImage('attachment://F1Screenshot.png');
-        payload.files = [{ attachment: screenshot, name: 'F1Screenshot.png' }];
-      }
-      // Store before sending so an immediate DM reply can always find the request.
+      const channel = await require('../features/tickets').createVerificationTicket(interaction, type);
+      await reviewChannel(interaction.guild, channel.id);
+      const request = {id:randomUUID(),guildId:interaction.guildId,guildName:interaction.guild.name,
+        ticketChannelId:channel.id,reviewChannelId:channel.id,userId:interaction.user.id,type,status:'awaiting',createdAt:Date.now()};
       save(request);
-      try { await interaction.user.send(payload); }
-      catch (error) {
-        request.status = 'cancelled'; save(request);
-        if (error.code === 50007) return interaction.editReply({ content: 'Enable direct messages from server members in your Discord privacy settings, then try again. / Activez les messages privés des membres du serveur, puis réessayez.' });
-        throw error;
-      }
-      return interaction.editReply({ content: '📩 Check your DMs! Send your F1 screenshot there to submit your request. / Consultez vos MP et envoyez votre capture F1 au bot.' });
-    } catch (error) {
-      console.error('[Verification] Start failed:', error);
-      return interaction.editReply({ content: 'Could not start verification. Ask an officer to check the review channel and bot permissions. / Impossible de démarrer la vérification. Contactez un officier.' });
+      if(existing?.status==='awaiting'){existing.status='cancelled';save(existing);}
+      return interaction.editReply({content: `✅ Post your F1 screenshot in your private ticket: <#${channel.id}>. / Envoyez votre capture F1 dans votre ticket privé.`});
+    } catch(error) {
+      console.error('[Verification] Start failed:',error);
+      return interaction.editReply({content:'Could not prepare your verification ticket. Ask an officer to check the bot permissions and try again. / Impossible de préparer votre ticket. Contactez un officier.'});
     }
-  }, () => interaction.editReply({ content: 'Your request is being processed. / Votre demande est en cours.' }));
+  }, () => interaction.editReply({content:'Your request is being processed. / Votre demande est en cours.'}));
 }
 
 async function onMessage(message) {
-  if (message.guild || message.author.bot) return;
+  if (message.author.bot) return;
+  if (!message.guild) {
+    const request=Object.values(read()).find(r=>r.userId===message.author.id&&active(r));
+    if (!request) return;
+    return message.reply(request.ticketChannelId
+      ? `Verification screenshots now belong in your private server ticket: https://discord.com/channels/${request.guildId}/${request.ticketChannelId}`
+      : request.status==='pending' ? 'Your screenshot is already awaiting officer review.' : 'Please open Verification or Ally Request from the server ticket panel. Screenshots must now be posted in that private ticket, not by DM.');
+  }
+  if (!message.attachments.size && message.content.trim().toLowerCase() !== 'cancel') return;
   return locked(`user:${message.author.id}`, async () => {
-    const request = Object.values(read()).find(item => item.userId === message.author.id && active(item));
-    if (!request) return message.reply('Start verification using the server’s ticket panel first. / Commencez via le panneau de vérification du serveur.');
+    const request = Object.values(read()).find(item => item.userId === message.author.id && item.guildId === message.guild.id && item.ticketChannelId === message.channelId && active(item));
+    if (request) {
+      const maintenance = require('./maintenance');
+      const state = maintenance.active(request.guildId, 'ticketpanel');
+      if (state) return message.reply(maintenance.notice(state));
+    }
+    if (!request) return;
+    if (!message.attachments.size && message.content.trim().toLowerCase() !== 'cancel') return;
     if (request.status === 'pending') return message.reply('Your screenshot is awaiting review. / Votre capture attend la décision d’un officier.');
     if (message.content.trim().toLowerCase() === 'cancel') {
       request.status = 'cancelled'; save(request);
@@ -115,7 +118,7 @@ async function onMessage(message) {
     if (request.type === 'ally' && !message.content.trim()) return message.reply('Resend the screenshot with your clan/group name in the same message. / Renvoyez la capture avec le nom de votre clan/groupe dans le même message.');
     const guild = await message.client.guilds.fetch(request.guildId);
     await guild.members.fetch(request.userId);
-    const channel = await reviewChannel(guild);
+    const channel = await reviewChannel(guild, request.ticketChannelId);
     const pending = { ...request, status: 'pending', note: message.content.slice(0, 1024), reviewChannelId: channel.id, sourceMessageId: message.id };
     const review = await channel.send({ ...reviewPayload(pending), files: [{ attachment: images[0].url, name: 'screenshot.png' }] });
     pending.reviewMessageId = review.id;
@@ -144,7 +147,7 @@ async function grantRoles(guild, request) {
     : [configuredRole(guild, 'VERIFIED_MEMBER_ROLE_ID', 'Member'), configuredRole(guild, 'CADET_ROLE_ID', 'Cadet')];
   if (required.some(role => !role)) throw new Error('Configure the required Member + Cadet roles or Ally role first.');
   // Never demote an existing ranked member back to Cadet.
-  const ranked = member.roles.cache.some(role => ['Private', 'Legionaire', 'Dragoon', 'Hussar', 'Hussars', 'Officer', 'Commander'].includes(role.name));
+  const ranked = ['Private','Legionaire','Dragoon','Hussar','Officer','Commander'].includes(require('./ranks').getMemberRank(member));
   const additions = (request.type === 'verify' && ranked ? required.slice(0, 1) : required).filter(role => !member.roles.cache.has(role.id));
   const removals = [configuredRole(guild, 'UNVERIFIED_ROLE_ID', 'unverified')];
   if (request.type === 'verify') removals.push(configuredRole(guild, 'FORMER_MEMBER_ROLE_ID', 'Former Member'), roleByName(guild, 'Former collie'), configuredRole(guild, 'ALLY_ROLE_ID', 'Ally'));
@@ -183,7 +186,7 @@ async function handleReview(interaction) {
     try {
       if (accepted) {
         await grantRoles(interaction.guild, current);
-        const channel = await require('../features/tickets').createFollowupTicket(interaction, current.userId);
+        const channel = await require('../features/tickets').createFollowupTicket(interaction, current.userId, current.type === 'verify');
         current.followupChannelId = channel.id;
       }
     } catch (error) {
@@ -202,12 +205,17 @@ async function handleReview(interaction) {
     } catch (error) { panelUpdated = false; console.error('[Verification] Panel update failed:', error); }
     let notified = true;
     try {
-      const user = await interaction.client.users.fetch(current.userId);
-      await user.send({ content: accepted
+      const notification = { content: accepted
         ? `✅ Your ${current.type === 'ally' ? 'ally' : 'member'} verification for **${current.guildName}** was accepted. Your roles have been updated.\nVotre vérification a été acceptée. Vos rôles ont été mis à jour.\n\nAdditional questions? Your private ticket / Questions supplémentaires ? Votre ticket privé :\nhttps://discord.com/channels/${current.guildId}/${current.followupChannelId}`
-        : `Your verification for **${current.guildName}** was rejected. / Votre vérification a été refusée.\n\n**Reason / Motif:** ${reason}\n\nYou can submit a new request from the server panel. / Vous pouvez refaire une demande depuis le panneau du serveur.`, allowedMentions: { parse: [] } });
+        : `Your verification for **${current.guildName}** was rejected. / Votre vérification a été refusée.\n\n**Reason / Motif:** ${reason}\n\nYou can submit a new request from the server panel. / Vous pouvez refaire une demande depuis le panneau du serveur.`,
+        components: accepted && current.type === 'verify' ? [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`cx_onboarding:open:${current.guildId}:${current.userId}`).setLabel('Open onboarding').setStyle(ButtonStyle.Success))] : [],
+        allowedMentions: { parse: [] } };
+      if(current.ticketChannelId) await interaction.channel.send(notification);
+      const sendDM=async()=>{const user=await interaction.client.users.fetch(current.userId);await user.send(notification);};
+      if(current.ticketChannelId) await sendDM().catch(()=>{});
+      else await sendDM();
     } catch { notified = false; }
-    return interaction.editReply(`${accepted ? 'Accepted; roles updated.' : 'Rejected.'}${notified ? ' Applicant notified by DM.' : ' Could not DM the applicant.'}${panelUpdated ? '' : ' The panel could not be refreshed; this decision is saved.'}`);
+    return interaction.editReply(`${accepted ? 'Accepted; roles updated.' : 'Rejected.'}${notified ? ' Applicant notified.' : ' Could not notify the applicant.'}${panelUpdated ? '' : ' The panel could not be refreshed; this decision is saved.'}`);
   }, () => interaction.editReply('Another officer is processing this request.'));
 }
 
@@ -216,7 +224,7 @@ function init(client) {
   initializedClients.add(client);
   client.on('messageCreate', message => {
     onMessage(message).catch(async error => {
-      console.error('[Verification] DM failed:', error);
+      console.error('[Verification] Upload failed:', error);
       await message.reply('Could not process your screenshot. Try again, or contact an officer if this continues. / Impossible de traiter votre capture. Réessayez ou contactez un officier.').catch(() => {});
     });
   });

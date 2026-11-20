@@ -23,10 +23,10 @@ module.exports = {
       .addIntegerOption(option => option.setName('page').setDescription('Page').setMinValue(1)))
     .addSubcommand(sub => idOption(sub.setName('view').setDescription('Browse orders or view a selected order'), false))
     .addSubcommand(sub => idOption(sub.setName('claim').setDescription('Assign yourself to an unclaimed order')))
-    .addSubcommand(sub => idOption(sub.setName('update').setDescription('Record a real pickup, production, delivery, return or cancellation'))
-      .addStringOption(option => option.setName('action').setDescription('What happened in game').setRequired(true).addChoices(...['pickup', 'produce', 'deliver', 'return', 'cancel'].map(value => ({ name: value, value }))))
+    .addSubcommand(sub => idOption(sub.setName('update').setDescription('Record a pickup, production, delivery, return, cargo loss or cancellation'))
+      .addStringOption(option => option.setName('action').setDescription('What happened in game').setRequired(true).addChoices(...['pickup', 'produce', 'deliver', 'return', 'loss', 'cancel'].map(value => ({ name: value, value }))))
       .addIntegerOption(option => option.setName('quantity').setDescription('Quantity moved; omit for cancellation').setMinValue(1).setMaxValue(1000000))
-      .addStringOption(option => option.setName('note').setDescription('Delivery confirmation / cancellation reason / evidence link').setMaxLength(500))),
+      .addStringOption(option => option.setName('note').setDescription('Delivery confirmation / loss or cancellation reason / evidence link').setMaxLength(500))),
   autocomplete: panel.autocomplete,
   handleButton: panel.handleButton,
   handleSelect: panel.handleSelect,

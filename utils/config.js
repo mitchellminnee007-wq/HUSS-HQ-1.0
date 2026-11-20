@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 
 const STORE_PATH = path.join(__dirname, '..', 'data', 'config.json');
@@ -15,8 +15,7 @@ function cleanEnvValue(value) {
 
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
-  try { return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8')); }
-  catch { return { guilds: {} }; }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
@@ -80,7 +79,7 @@ function getAllConfig(guildId) {
     'WELCOME_IMAGE_URL'
   ];
   const result = {};
-  for (const key of Object.keys(guildConfig)) if (key.startsWith('QUALIFICATION_')) keys.push(key);
+  for (const key of Object.keys(guildConfig)) if (key.startsWith('QUALIFICATION_') || key.endsWith('_ROLE_ID') || key.startsWith('SQUAD_') || key === 'PERMISSIONS_REQUIRE_ROLE_IDS') keys.push(key);
   for (const key of keys) {
     result[key] = guildConfig[key] || cleanEnvValue(process.env[key]) || null;
   }

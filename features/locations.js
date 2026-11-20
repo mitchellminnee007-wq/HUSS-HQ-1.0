@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 

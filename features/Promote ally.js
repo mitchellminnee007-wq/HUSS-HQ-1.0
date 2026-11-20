@@ -3,13 +3,13 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const officerRanks = ['Officer', 'Commander'];
 
 function getRoleByName(guild, roleName) {
+  const id = require('../utils/config').getConfig(guild.id, `${roleName.toUpperCase()}_ROLE_ID`);
+  if(id)return guild.roles.cache.get(id)||null;
   const normalized = roleName.toLowerCase();
   return guild.roles.cache.find(role => role.name.toLowerCase() === normalized) || null;
 }
 
-function getMemberOfficerRank(member) {
-  return officerRanks.find(rank => member.roles.cache.some(role => role.name === rank)) || null;
-}
+function getMemberOfficerRank(member) { return require('../utils/ranks').isOfficer(member) ? require('../utils/ranks').getMemberRank(member) : null; }
 
 module.exports = {
   data: new SlashCommandBuilder()

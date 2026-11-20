@@ -18,7 +18,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    if (!interaction.member.roles.cache.some(role => OFFICER_RANKS.includes(role.name))) {
+    if (!require('../utils/ranks').isOfficer(interaction.member)) {
       return interaction.reply({
         content: 'Only Officers and Commanders can clean up qualification threads.',
         ephemeral: true,

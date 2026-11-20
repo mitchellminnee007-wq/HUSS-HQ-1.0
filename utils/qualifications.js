@@ -1,0 +1,6 @@
+const {getConfig}=require('./config');
+function qualificationRole(guild,key){const training=require('../features/training');const q=training.QUALIFICATIONS.find(q=>q.key===key);if(!q)return null;const id=getConfig(guild.id,`QUALIFICATION_${key.toUpperCase()}_ROLE_ID`)||training.QUALIFICATION_ROLE_IDS[key];return guild.roles.cache.get(id)||(!getConfig(guild.id,`QUALIFICATION_${key.toUpperCase()}_ROLE_ID`)?guild.roles.cache.find(r=>r.name===q.name):null);}
+function qualified(member,key){const role=qualificationRole(member.guild,key);return role?member.roles.cache.has(role.id):null;}
+function list(member){return require('../features/training').QUALIFICATIONS.filter(q=>qualified(member,q.key)).map(q=>q.name);}
+async function canSee(member,channelId){if(!channelId)return false;try{const c=await member.guild.channels.fetch(channelId);return Boolean(c?.isTextBased()&&c.permissionsFor(member)?.has(require('discord.js').PermissionFlagsBits.ViewChannel)&&(!c.isThread?.()||!c.isPrivateThread?.()||c.permissionsFor(member)?.has(require('discord.js').PermissionFlagsBits.ManageThreads)||await c.members.fetch(member.id).catch(()=>null)));}catch{return false;}}
+module.exports={qualificationRole,qualified,list,canSee};

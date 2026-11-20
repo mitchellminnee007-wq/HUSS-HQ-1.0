@@ -6,7 +6,7 @@ function manager(member) {
 }
 function memberAccess(member) {
   const id = getConfig(member.guild.id, 'VERIFIED_MEMBER_ROLE_ID');
-  return manager(member) || Boolean(getMemberRank(member)) || (id ? member.roles.cache.has(id) : member.roles.cache.some(role => role.name === 'Member'));
+  return manager(member) || Boolean(getMemberRank(member)) || require('./ranks').isVerifiedMember(member);
 }
 function canViewStockpile(member, pile) {
   return Boolean(pile && memberAccess(member) && (pile.visibility !== 'officers' || isOfficer(member)));

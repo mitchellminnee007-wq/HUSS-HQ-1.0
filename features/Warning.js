@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   EmbedBuilder,
@@ -59,16 +59,18 @@ function getMemberRecord(guildStore, userId) {
 }
 
 function getRoleByName(guild, roleName) {
+  if (ranks.includes(roleName)) return require('../utils/ranks').getRankRole(guild,roleName);
+  const key = roleName === 'Member' ? 'VERIFIED_MEMBER_ROLE_ID' : `${roleName.toUpperCase().replaceAll(' ', '_')}_ROLE_ID`;
+  const configured = getConfig(guild.id,key);
+  if(configured)return guild.roles.cache.get(configured)||null;
   const normalized = roleName.toLowerCase();
   return guild.roles.cache.find(role => role.name.toLowerCase() === normalized || matchesRank(role, roleName)) || null;
 }
 
-function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
-}
+const { getMemberRank } = require('../utils/ranks');
 
 function getRankRoles(member) {
-  return [...member.roles.cache.values()].filter(role => ranks.some(rank => matchesRank(role, rank)));
+  return require('../utils/ranks').getMemberRankRoles(member);
 }
 
 function getWarningRoles(guild) {
@@ -145,7 +147,7 @@ async function dischargeMember(member) {
   const formerCollieRole = getRoleByName(member.guild, 'Former collie');
   const rolesToRemove = [
     ...getRankRoles(member),
-    ...member.roles.cache.filter(role => role.name.toLowerCase() === 'member').values(),
+    ...member.roles.cache.filter(role => role.id === getRoleByName(member.guild,'Member')?.id).values(),
     ...getWarningRoles(member.guild).filter(role => member.roles.cache.has(role.id))
   ];
 

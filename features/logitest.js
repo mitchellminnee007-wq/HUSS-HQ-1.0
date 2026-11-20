@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const {
@@ -84,12 +84,7 @@ function getStatusBannerUrl(status) {
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
 
-  try {
-    return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
-  } catch (error) {
-    console.error('[logitest] Failed to parse task store, resetting to empty store:', error);
-    return { guilds: {} };
-  }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
@@ -134,7 +129,7 @@ function buildTaskTitle(requestedItems, destination, priority) {
 function isLeadershipMember(member) {
   if (!member) return false;
   if (member.permissions?.has(PermissionFlagsBits.ManageGuild)) return true;
-  return member.roles?.cache?.some(role => OFFICER_ROLE_NAMES.includes(role.name)) || false;
+  return require('../utils/ranks').isOfficer(member);
 }
 
 function buildTaskHeaderContent(task) {

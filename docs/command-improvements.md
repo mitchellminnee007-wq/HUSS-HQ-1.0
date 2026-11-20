@@ -7,7 +7,7 @@
 - `/certify`: Trainers, Officers or Commanders record pass/revocation with a reason. Configure Trainer and qualification roles through `/config`. Self-certification is disallowed.
 - `/warreport`: current/last completed tracked war, reported kills, stored signups, completed logistics tasks and delivered orders. Completed-war history starts with this release.
 - `/auditlog`: officer-only, paginated records for instrumented rank/warning, certification, ticket close, logistics, manual rollover and kill-reset actions. It is not a complete Discord audit log and has no historical backfill.
-- Rollover uses configured roles and refuses to run if required roles cannot be managed. `/runrollover` defaults to a preview; applying requires `dry:False confirm:True`. `/startrollover` requires confirmation because it clears activity roles and schedules the reset. Existing exemptions still apply.
+- Rollover now uses `/warflow`: Commander approval starts a full 48-hour activity check, followed by a separate preview and confirmation. Legacy automatic schedules cannot execute. Required roles must be manageable before changes begin. See `squads-warflow.md`.
 - Kill count: starting a new war cannot overwrite an active war, old panels/forms cannot update the current war, and resets require confirmation. Completed wars are retained.
 - Activity checks created after this update persist their deadlines across restarts. Rosters are paginated. Clearing activity roles requires confirmation.
 - Ticket closure requires confirmation, captures all paginated messages in a local HTML transcript, and stops before deletion if transcript generation or configured log delivery fails. Attachment links can later expire; attachment binaries are not archived.

@@ -4,16 +4,14 @@ const audit = require('../utils/audit');
 const { ranks, matchesRank } = require('../utils/ranks');
 const highestOfficerDemoteIndex = ranks.indexOf('Hussar');
 
-function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
-}
+const { getMemberRank } = require('../utils/ranks');
 
 function getRankRole(guild, rank) {
-  return guild.roles.cache.find(role => matchesRank(role, rank)) || null;
+  return require('../utils/ranks').getRankRole(guild,rank);
 }
 
 function getMemberRankRoles(member) {
-  return ranks.filter(rank => member.roles.cache.some(role => matchesRank(role, rank)));
+  return ranks.filter(rank => require('../utils/ranks').hasRank(member,rank));
 }
 
 function canAffectRank(executorRank, targetRank) {
@@ -75,7 +73,7 @@ module.exports = {
     if (!previousRole) {
       return interaction.reply({ content: `The rank role "${previousRank}" does not exist on this server.`, ephemeral: true });
     }
-    if (previousRole.editable === false || target.roles.cache.some(role => ranks.some(rank => matchesRank(role, rank)) && role.editable === false)) return interaction.reply({ content: 'The bot cannot manage these ranks. Check its role hierarchy and Manage Roles permission.', ephemeral: true });
+    if (previousRole.editable === false || require('../utils/ranks').getMemberRankRoles(target).some(role => role.editable === false)) return interaction.reply({ content: 'The bot cannot manage these ranks. Check its role hierarchy and Manage Roles permission.', ephemeral: true });
 
     const rolesToRemove = getMemberRankRoles(target)
       .map(rank => getRankRole(interaction.guild, rank))

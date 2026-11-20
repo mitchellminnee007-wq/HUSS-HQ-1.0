@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -16,25 +16,19 @@ const RR_STORE_PATH = path.join(__dirname, '..', 'data', 'reactionroles.json');
 const { getAllConfig } = require('../utils/config');
 const OFFICER_RANKS = ['Officer', 'Commander'];
 
-function isOfficer(member) {
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
 function safeSelfRole(role) {
   const sensitive = [PermissionFlagsBits.Administrator, PermissionFlagsBits.ManageGuild, PermissionFlagsBits.ManageRoles, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.KickMembers, PermissionFlagsBits.BanMembers, PermissionFlagsBits.ManageWebhooks, PermissionFlagsBits.ModerateMembers];
   return role && !role.managed && role.id !== role.guild.id && role.editable
     && !role.permissions.any(sensitive)
-    && !Object.entries(getAllConfig(role.guild.id)).some(([key, value]) => key.endsWith('_ROLE_ID') && value === role.id)
+    && !Object.entries(getAllConfig(role.guild.id)).some(([key, value]) => (key.endsWith('_ROLE_ID') || key.startsWith('SQUAD_') && key.endsWith('_ID')) && value === role.id)
     && !/^(officer|commander|recruitment officer|trainer|cadet|private|legionaire|dragoon|hussars?|member|ally|unverified|warning.*|qualified.*)$/i.test(role.name);
 }
 
 function readRRStore() {
   if (!fs.existsSync(RR_STORE_PATH)) return { messages: {} };
-  try {
-    return JSON.parse(fs.readFileSync(RR_STORE_PATH, 'utf8'));
-  } catch {
-    return { messages: {} };
-  }
+  return JSON.parse(fs.readFileSync(RR_STORE_PATH, 'utf8'));
 }
 
 function writeRRStore(data) {

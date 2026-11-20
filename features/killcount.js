@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -125,14 +125,14 @@ function resolveVehicleInput(raw) {
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
-  try { return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8')); }
-  catch { return { guilds: {} }; }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
   const dir = path.dirname(STORE_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
+  fs.writeFileSync(STORE_PATH + '.tmp', JSON.stringify(data, null, 2));
+  fs.renameSync(STORE_PATH + '.tmp', STORE_PATH);
 }
 
 function getActive(guildId) {
@@ -151,23 +151,19 @@ function saveActive(guildId, data) {
   writeStore(store);
 }
 
-function clearActive(guildId) {
+function clearActive(guildId, endedAt = Date.now()) {
   const store = readStore();
   if (store.guilds[guildId]?.active) {
     store.guilds[guildId].history ??= [];
-    store.guilds[guildId].history.push({ ...store.guilds[guildId].active, endedAt: Date.now() });
+    store.guilds[guildId].history.push({ ...store.guilds[guildId].active, endedAt });
   }
   if (store.guilds[guildId]) delete store.guilds[guildId].active;
   writeStore(store);
 }
 
-function isOfficer(member) {
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
-function canAddKills(member) {
-  return member.roles.cache.some(r => KILL_RANKS.includes(r.name));
-}
+function canAddKills(member) { return isOfficer(member) || require('../utils/ranks').isVerifiedMember(member); }
 
 function deleteOwnSubmission(war, callerId, name, amount = null) {
   const targetName = name.toLowerCase();
@@ -397,6 +393,7 @@ module.exports = {
   },
   async executeUnlocked(interaction) {
     const sub     = interaction.options.getSubcommand();
+    if (['start','end'].includes(sub) && getConfig(interaction.guildId,'WARFLOW_ENABLED')) return interaction.reply({content:'War start and end are managed by the Able War API. Use /warflow status.',ephemeral:true});
     const guildId = interaction.guildId;
 
     // ── /killcount start ───────────────────────────────────────────────────
@@ -747,4 +744,50 @@ module.exports = {
       });
     }
   },
+};
+
+// All entry points share the same per-server lock as API transitions.
+for (const method of ['handleButton','handleModal']) {
+ const original=module.exports[method];
+ module.exports[method]=async function(i){
+  if(i.customId.startsWith('kc_end:')&&getConfig(i.guildId,'WARFLOW_ENABLED'))return i.reply({content:'War end is managed by the Able War API.',ephemeral:true});
+  if(commandLocks.has(i.guildId))return i.reply({content:'Another kill count action is processing. Retry shortly.',ephemeral:true});
+  commandLocks.add(i.guildId);try{return await original(i);}finally{commandLocks.delete(i.guildId);}
+ };
+}
+module.exports.apiSync=async function(guild,w){
+ if(commandLocks.has(guild.id))throw new Error('Kill count busy; retry next poll.');
+ commandLocks.add(guild.id);
+ try{
+  let active=getActive(guild.id);
+  if(active&&!active.apiWarId&&new RegExp('^(?:war\\s*)?'+w.warNumber+'$','i').test(active.name.trim())){active.apiWarId=w.warId;saveActive(guild.id,active);}
+  if(w.conquestEndTime){
+   if(active?.apiWarId===w.warId){
+    const channel=await guild.channels.fetch(active.channelId);const msg=active.messageId?await channel.messages.fetch(active.messageId).catch(()=>null):null;
+    if(msg)await msg.edit({embeds:[buildEmbed(active,true)],components:[]});
+    clearActive(guild.id,w.conquestEndTime);
+   }
+   return;
+  }
+  if(!w.conquestStartTime)return;
+  if(active&&active.apiWarId!==w.warId)throw new Error('Existing kill count belongs to a different war. Commander must reconcile it using /warflow reconcile.');
+  if(!active){
+   if(readStore().guilds[guild.id]?.history?.some(old=>old.apiWarId===w.warId))return;
+   active={name:`War ${w.warNumber}`,apiWarId:w.warId,channelId:getConfig(guild.id,'KILLCOUNT_CHANNEL_ID')||DEFAULT_KILLCOUNT_CHANNEL,messageId:null,kills:[],startedAt:w.conquestStartTime,startedBy:guild.client.user.id,startedByName:'Able War API'};saveActive(guild.id,active);
+  }
+  if(!active.messageId){
+   const channel=await guild.channels.fetch(active.channelId);
+   const msg=await channel.send({embeds:[buildEmbed(active)],allowedMentions:{parse:[]},nonce:require('node:crypto').createHash('sha256').update(w.warId+'killcount').digest('hex').slice(0,24),enforceNonce:true});
+   active.messageId=msg.id;saveActive(guild.id,active);await msg.edit({components:[buildPanelRow(msg.id)]});
+  }
+ }finally{commandLocks.delete(guild.id);}
+};
+module.exports.apiHistory=id=>readStore().guilds[id]||{};
+module.exports.reconcile=async function(guild,w){
+ if(commandLocks.has(guild.id))throw new Error('Kill count busy.');
+ commandLocks.add(guild.id);try{const active=getActive(guild.id);if(active&&active.apiWarId!==w.warId){
+ const channel=await guild.channels.fetch(active.channelId);const msg=active.messageId?await channel.messages.fetch(active.messageId).catch(()=>null):null;
+ if(msg)await msg.edit({embeds:[buildEmbed(active,true)],components:[]});clearActive(guild.id);
+ }}finally{commandLocks.delete(guild.id);}
+ return module.exports.apiSync(guild,w);
 };

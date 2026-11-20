@@ -87,7 +87,7 @@ module.exports = {
           value.code = interaction.options.getString('code').trim();
         } else if (sub === 'archive') {
           if (!interaction.options.getBoolean('confirm')) throw new Error('Archive cancelled.');
-          if (Object.values(guild.orders).some(order => [order.sourceId, order.destinationId].includes(id) && !['cancelled', 'delivered'].includes(order.status))) throw new Error('Finish or cancel linked orders before archiving.');
+          if (Object.values(guild.orders).some(order => [order.sourceId, order.destinationId].includes(id) && !['cancelled', 'delivered', 'completed_with_losses'].includes(order.status))) throw new Error('Finish or cancel linked orders before archiving.');
           value.archived = true;
         }
         return value;

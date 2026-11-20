@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -86,14 +86,16 @@ const QUALIFICATION_PREREQUISITES = {
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
-  try { return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8')); }
-  catch { return { guilds: {} }; }
+  const data=JSON.parse(fs.readFileSync(STORE_PATH,'utf8'));
+  for(const [guildId,records] of Object.entries(data.guilds||{}))for(const record of Object.values(records))record.guildId=guildId;
+  return data;
 }
 
 function writeStore(data) {
   const dir = path.dirname(STORE_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
+  fs.writeFileSync(STORE_PATH+'.tmp', JSON.stringify(data, null, 2));
+  fs.renameSync(STORE_PATH+'.tmp',STORE_PATH);
 }
 
 function normalizeTraining(training) {
@@ -121,8 +123,10 @@ function getTraining(guildId, msgId) {
 }
 
 function saveTraining(guildId, msgId, data) {
+  data.guildId=guildId;
   const store = readStore();
   if (!store.guilds[guildId]) store.guilds[guildId] = {};
+  if(!store.guilds[guildId][msgId]&&data.type!=='qualification-board')require('../utils/war-context').tag(guildId,data);
   store.guilds[guildId][msgId] = data;
   writeStore(store);
 }
@@ -183,12 +187,20 @@ function isTimedTraining(training) {
     && Number.isFinite(training.time);
 }
 
-async function sendTrainingReminder(client, guildId, msgId, tr) {
+const reminderSending=new Set();
+async function sendTrainingReminder(client,guildId,msgId,tr) {
+ const key=guildId+':'+msgId;if(reminderSending.has(key))return;reminderSending.add(key);
+ try {await deliverTrainingReminder(client,guildId,msgId,tr);}
+ catch {require('../utils/health').record('notification_failure',0,guildId);}
+ finally {reminderSending.delete(key);}
+}
+async function deliverTrainingReminder(client, guildId, msgId, tr) {
   tr = normalizeTraining(tr);
   if (!isTimedTraining(tr)) return;
-  if (tr.reminderSent) return;
+  if (tr.reminderSent || require('../utils/maintenance').active(guildId,'training')) return;
 
-  const acceptedIds = tr.attendees.accepted.map(member => member.id);
+  const notifications=require('../utils/member-notifications');
+  const acceptedIds = tr.attendees.accepted.map(member => member.id).filter(id=>notifications.mode(guildId,id,'training')==='channel').slice(0,75);
   const channel = await client.channels.fetch(tr.channelId).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
@@ -212,11 +224,12 @@ async function sendTrainingReminder(client, guildId, msgId, tr) {
     allowedMentions: { users: acceptedIds }
   }).catch(() => null);
 
+  await notifications.eventDMs(client,guildId,msgId,tr,'training');
+
   // Store the reminder message ID so it can be cleaned up when the training is deleted
   if (reminderMsg) {
-    tr.reminderSent = true;
-    tr.reminderMsgId = reminderMsg.id;
-    saveTraining(guildId, msgId, tr);
+    const current=getTraining(guildId,msgId);
+    if(current&&current.time===tr.time){current.reminderSent = true;current.reminderMsgId = reminderMsg.id;saveTraining(guildId, msgId, current);}
   }
 }
 
@@ -254,9 +267,7 @@ function scheduleAllTrainingReminders(client) {
   }
 }
 
-function isOfficer(member) {
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
 function getTrainerRoleId(qualificationKey) {
   return TRAINER_ROLE_IDS[qualificationKey] ?? TRAINER_ROLE_ID;
@@ -384,7 +395,7 @@ function buildQualificationEmbed(board, replaced = false) {
         const status = qualification.closed
           ? '**CLOSED**'
           : `\`${signups.length} signed up\`${threadStatus}`;
-        const roleId = QUALIFICATION_ROLE_IDS[qualification.key];
+        const roleId = getConfig(board.guildId,`QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`) || QUALIFICATION_ROLE_IDS[qualification.key];
         return {
           name: '\u200b',
           value: `${roleId ? `<@&${roleId}>` : qualification.name} ${status}`,
@@ -419,7 +430,7 @@ function buildQualificationRows(msgId) {
 
 function getMissingQualificationPrerequisites(member, qualificationKey) {
   return (QUALIFICATION_PREREQUISITES[qualificationKey] ?? [])
-    .filter(key => !member.roles.cache.has(QUALIFICATION_ROLE_IDS[key]))
+    .filter(key => !require('../utils/qualifications').qualified(member,key))
     .map(key => QUALIFICATION_BY_KEY.get(key));
 }
 
@@ -476,7 +487,7 @@ async function refreshQualificationBoard(interaction, board, msgId) {
       components: buildQualificationRows(msgId),
       allowedMentions: {
         roles: QUALIFICATIONS
-          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .map(qualification => getConfig(board.guildId,`QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`) || QUALIFICATION_ROLE_IDS[qualification.key])
           .filter(Boolean),
       },
     }).catch(() => {});
@@ -520,7 +531,7 @@ async function refreshStoredQualificationBoards(client) {
         components: buildQualificationRows(msgId),
         allowedMentions: {
           roles: QUALIFICATIONS
-            .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+            .map(qualification => getConfig(board.guildId,`QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`) || QUALIFICATION_ROLE_IDS[qualification.key])
             .filter(Boolean),
         },
       }).catch(error => {
@@ -584,7 +595,7 @@ async function findQualificationThread(guild, board, qualification, createIfMiss
       continue;
     }
 
-    await thread.setInvitable(false, 'Disabling member invites to qualification thread').catch(error => {
+    if(thread.invitable !== false) await thread.setInvitable(false, 'Disabling member invites to qualification thread').catch(error => {
       console.error(`Could not disable member invites for qualification thread ${thread.id}:`, error);
     });
     board.threads[qualification.key] = thread.id;
@@ -868,7 +879,7 @@ async function clearQualificationApplications(guild, apply = false) {
       components: buildQualificationRows(msgId),
       allowedMentions: {
         roles: QUALIFICATIONS
-          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .map(qualification => getConfig(board.guildId,`QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`) || QUALIFICATION_ROLE_IDS[qualification.key])
           .filter(Boolean),
       },
     }).catch(error => {
@@ -1004,7 +1015,7 @@ module.exports = {
     .setDMPermission(false),
 
   init(client) {
-    scheduleAllTrainingReminders(client);
+    if(client.isReady())scheduleAllTrainingReminders(client);else client.once('clientReady',()=>scheduleAllTrainingReminders(client));
     client.once('ready', () => {
       refreshStoredQualificationBoards(client);
     });
@@ -1025,6 +1036,7 @@ module.exports = {
     }
 
     const board = {
+      guildId: interaction.guildId,
       type: 'qualification-board',
       createdBy: interaction.user.id,
       createdByName: interaction.member.displayName,
@@ -1037,7 +1049,7 @@ module.exports = {
       embeds: [buildQualificationEmbed(board)],
       allowedMentions: {
         roles: QUALIFICATIONS
-          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .map(qualification => getConfig(board.guildId,`QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`) || QUALIFICATION_ROLE_IDS[qualification.key])
           .filter(Boolean),
       },
     });
@@ -1046,7 +1058,7 @@ module.exports = {
       components: buildQualificationRows(msg.id),
       allowedMentions: {
         roles: QUALIFICATIONS
-          .map(qualification => QUALIFICATION_ROLE_IDS[qualification.key])
+          .map(qualification => getConfig(board.guildId,`QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`) || QUALIFICATION_ROLE_IDS[qualification.key])
           .filter(Boolean),
       },
     });

@@ -13,6 +13,8 @@ const INVITE_PERMISSIONS = [
   PermissionFlagsBits.CreatePrivateThreads,
   PermissionFlagsBits.SendMessagesInThreads,
   PermissionFlagsBits.ManageThreads,
+  PermissionFlagsBits.Connect,
+  PermissionFlagsBits.Speak,
 ].reduce((acc, perm) => acc | perm, 0n);
 
 module.exports = {

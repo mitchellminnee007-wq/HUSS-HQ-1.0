@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -24,14 +24,14 @@ const reminderTimers           = new Map();
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
-  try { return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8')); }
-  catch { return { guilds: {} }; }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
   const dir = path.dirname(STORE_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
+  fs.writeFileSync(STORE_PATH+'.tmp', JSON.stringify(data, null, 2));
+  fs.renameSync(STORE_PATH+'.tmp',STORE_PATH);
 }
 
 function getOp(guildId, msgId) {
@@ -41,13 +41,16 @@ function getOp(guildId, msgId) {
 function saveOp(guildId, msgId, data) {
   const store = readStore();
   if (!store.guilds[guildId]) store.guilds[guildId] = {};
+  if(!store.guilds[guildId][msgId])require('../utils/war-context').tag(guildId,data);
   store.guilds[guildId][msgId] = data;
   writeStore(store);
+  require('../utils/community').transact(guildId,g=>{g.operationArchive||={};g.operationArchive[msgId]=data;});
 }
 
 function deleteOp(guildId, msgId) {
   const store = readStore();
   if (store.guilds[guildId]) {
+    const old=store.guilds[guildId][msgId];if(old)require('../utils/community').transact(guildId,g=>{g.operationArchive||={};g.operationArchive[msgId]={...old,cancelledAt:Date.now()};});
     delete store.guilds[guildId][msgId];
     writeStore(store);
   }
@@ -60,10 +63,18 @@ function clearReminder(guildId, msgId) {
   reminderTimers.delete(key);
 }
 
-async function sendOperationReminder(client, guildId, msgId, op) {
-  if (op.reminderSent) return;
+const reminderSending=new Set();
+async function sendOperationReminder(client,guildId,msgId,op) {
+ const key=guildId+':'+msgId;if(reminderSending.has(key))return;reminderSending.add(key);
+ try {await deliverOperationReminder(client,guildId,msgId,op);}
+ catch {require('../utils/health').record('notification_failure',0,guildId);}
+ finally {reminderSending.delete(key);}
+}
+async function deliverOperationReminder(client, guildId, msgId, op) {
+  if (op.reminderSent || require('../utils/maintenance').active(guildId,'operation')) return;
 
-  const acceptedIds = op.attendees.accepted.map(member => member.id);
+  const notifications=require('../utils/member-notifications');
+  const acceptedIds = op.attendees.accepted.map(member => member.id).filter(id=>notifications.mode(guildId,id,'operations')==='channel').slice(0,75);
   const channel = await client.channels.fetch(op.channelId).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
@@ -84,14 +95,16 @@ async function sendOperationReminder(client, guildId, msgId, op) {
         )
         .setFooter({ text: '⚔️ HUSS Command  •  15-minute reminder' })
     ],
+    components: notifications.operationButtons(guildId,msgId),
     allowedMentions: { users: acceptedIds }
   }).catch(() => null);
 
+  await notifications.eventDMs(client,guildId,msgId,op,'operations');
+
   // Store the reminder message ID so it can be cleaned up when the op is deleted
   if (reminderMsg) {
-    op.reminderSent = true;
-    op.reminderMsgId = reminderMsg.id;
-    saveOp(guildId, msgId, op);
+    const current=getOp(guildId,msgId);
+    if(current&&current.time===op.time){current.reminderSent = true;current.reminderMsgId = reminderMsg.id;saveOp(guildId, msgId, current);}
   }
 }
 
@@ -129,9 +142,7 @@ function scheduleAllOperationReminders(client) {
   }
 }
 
-function isOfficer(member) {
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
 function getTimeZoneOffsetMs(date, timeZone) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -269,14 +280,14 @@ function buildOpEmbed(op) {
     list.length ? list.map(e => e.name).join('\n') : '*None yet*';
 
   return new EmbedBuilder()
-    .setColor(0x5865F2)
+    .setColor(0x8b2525)
     .setTitle(op.title)
-    .setDescription(op.description)
+    .setDescription(op.description + (op.squadName ? `\n\nSquad: **${op.squadName}**` : '') + (op.qualificationKey ? `\nRecommended qualification: **${require('./training').QUALIFICATIONS.find(q=>q.key===op.qualificationKey)?.name||op.qualificationKey}** — signup does not grant certification.` : ''))
     .addFields(
       { name: '🕐 Time', value: `<t:${timestamp}:F>\n<t:${timestamp}:R>` },
       {
         name:   `✅ Accepted (${op.attendees.accepted.length})`,
-        value:  fmt(op.attendees.accepted),
+        value:  fmt(op.attendees.accepted.map(m=>({...m,name:m.name+(op.arrivals?.[m.id]?.status==='late'?' (running late)':'')}))).slice(0,1024),
         inline: true,
       },
       {
@@ -350,6 +361,7 @@ async function refreshOpMessage(interaction, op, msgId) {
 
 // ── Module export ─────────────────────────────────────────────────────────────
 module.exports = {
+  readStore, getOp, saveOp, refreshOpMessage,
   data: new SlashCommandBuilder()
     .setName('operation')
     .setDescription('Create a new operation sign-up.')
@@ -357,7 +369,7 @@ module.exports = {
     .setDMPermission(false),
 
   init(client) {
-    scheduleAllOperationReminders(client);
+    if(client.isReady())scheduleAllOperationReminders(client);else client.once('clientReady',()=>scheduleAllOperationReminders(client));
   },
 
   async execute(interaction) {
@@ -405,6 +417,7 @@ module.exports = {
         op.attendees[list].push({ id: interaction.user.id, name: interaction.member.displayName });
       }
 
+      if(op.arrivals)delete op.arrivals[interaction.user.id];
       saveOp(interaction.guildId, msgId, op);
       await refreshOpMessage(interaction, op, msgId);
       scheduleOperationReminder(interaction.client, interaction.guildId, msgId, op);

@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const {
@@ -84,12 +84,7 @@ const STORAGE_TYPE_CHOICES = {
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
 
-  try {
-    return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
-  } catch (error) {
-    console.error('[logitasks] Failed to parse task store, resetting to empty store:', error);
-    return { guilds: {} };
-  }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
@@ -254,7 +249,7 @@ function isLeadershipMember(member) {
   if (!member) return false;
 
   if (member.permissions?.has(PermissionFlagsBits.ManageGuild)) return true;
-  return member.roles?.cache?.some(role => OFFICER_ROLE_NAMES.includes(role.name)) || false;
+  return require('../utils/ranks').isOfficer(member);
 }
 
 function buildTaskHeaderContent(task) {
@@ -819,6 +814,7 @@ module.exports = {
 
   init(client) {
     client.on('messageCreate', async message => {
+      if (message.guildId && require('../utils/maintenance').active(message.guildId, 'logitask')) return;
       if (message.author.bot || !message.channel || !message.channel.isThread?.()) return;
       if (!message.content?.trim() && !message.attachments?.size) return;
       if (message.content.includes(RELAY_MARKER)) return;

@@ -11,7 +11,7 @@ module.exports = {
     .addStringOption(option => option.setName('reason').setDescription('Assessment notes or revocation reason').setRequired(true).setMaxLength(500)),
   async execute(interaction) {
     const trainerId = getConfig(interaction.guildId, 'TRAINER_ROLE_ID');
-    const trainer = trainerId ? interaction.member.roles.cache.has(trainerId) : interaction.member.roles.cache.some(role => role.name === 'Trainer');
+    const trainer = require('../utils/ranks').hasConfiguredRole(interaction.member,'TRAINER_ROLE_ID','Trainer');
     if (!isOfficer(interaction.member) && !trainer) return interaction.reply({ content: 'Only trainers, Officers and Commanders can certify members.', ephemeral: true });
     const user = interaction.options.getUser('user', true);
     if (user.id === interaction.user.id) return interaction.reply({ content: 'Another trainer must assess you.', ephemeral: true });
@@ -20,7 +20,7 @@ module.exports = {
     const member = await interaction.guild.members.fetch(user.id);
     await interaction.guild.roles.fetch();
     const configured = getConfig(interaction.guildId, `QUALIFICATION_${qualification.key.toUpperCase()}_ROLE_ID`);
-    const role = configured ? interaction.guild.roles.cache.get(configured) : interaction.guild.roles.cache.get(QUALIFICATION_ROLE_IDS[qualification.key]) || interaction.guild.roles.cache.find(role => role.name === qualification.name);
+    const role = require('../utils/qualifications').qualificationRole(interaction.guild,qualification.key);
     if (!role?.editable || role.managed || role.id === interaction.guildId) return interaction.editReply('Configure an editable qualification role with /config set-role. The bot must have Manage Roles and be above it.');
     const result = interaction.options.getString('result');
     const reason = interaction.options.getString('reason');

@@ -80,6 +80,10 @@ module.exports = {
         )
     )
 
+    .addSubcommand(sub => sub.setName('set-rank').setDescription('Set a canonical rank role for permissions across the bot')
+      .addStringOption(o=>o.setName('rank').setDescription('Rank').setRequired(true).addChoices(...require('../utils/ranks').ranks.map(value=>({name:value,value}))))
+      .addRoleOption(o=>o.setName('role').setDescription('Existing Discord role').setRequired(true)))
+
     // /config set-role
     .addSubcommand(sub =>
       sub.setName('set-role')
@@ -117,6 +121,17 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.reply({ content: 'Manage Server permission is required.', ephemeral: true });
     const sub = interaction.options.getSubcommand();
+    if(sub === 'set-rank') {
+      const rank=interaction.options.getString('rank',true),role=interaction.options.getRole('role',true);
+      const ranks=require('../utils/ranks').ranks;
+      if(!ranks.includes(rank)||role.managed||role.id===interaction.guildId)return interaction.reply({content:'Choose a normal server role and a valid rank.',ephemeral:true});
+      const {getConfig}=require('../utils/config');
+      if(ranks.some(other=>other!==rank&&getConfig(interaction.guildId,`${other.toUpperCase()}_ROLE_ID`)===role.id))return interaction.reply({content:'Each rank must use a different role.',ephemeral:true});
+      setConfig(interaction.guildId,`${rank.toUpperCase()}_ROLE_ID`,role.id);
+      if(rank==='Commander')setConfig(interaction.guildId,'SQUAD_COMMANDER_ROLE_ID',role.id);
+      require('../utils/audit').record(interaction,'config.rank_role',role.id,{rank});
+      return interaction.reply({content:`${rank} now uses <@&${role.id}> across the bot. No member roles were changed.`,ephemeral:true,allowedMentions:{parse:[]}});
+    }
 
     // ── /config set-channel ─────────────────────────────────────────────────
     if (sub === 'set-channel') {

@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder,
   TextInputBuilder, TextInputStyle, PermissionFlagsBits, ChannelType } = require('discord.js');
@@ -70,7 +70,7 @@ function buildPage(guild, page = 'home', offset = 0) {
   } else if (page === 'logistics') {
     const inventory = readData('logistics-inventory', warnings).guilds?.[guild.id] || { stockpiles: {}, orders: {} };
     const stockpiles = Object.values(inventory.stockpiles).filter(value => !value.archived);
-    const orders = Object.values(inventory.orders).filter(value => !['cancelled', 'delivered'].includes(value.status));
+    const orders = Object.values(inventory.orders).filter(value => !['cancelled', 'delivered', 'completed_with_losses'].includes(value.status));
     embed.setDescription('Track counted stock, reserved quantities, production and deliveries. Counts are manually reported; the bot does not read or control your Foxhole inventory.')
       .addFields({ name: 'Stockpiles', value: String(stockpiles.length), inline: true }, { name: 'Active orders', value: String(orders.length), inline: true },
         { name: 'Timers needing attention', value: String(stockpiles.filter(value => value.expiresAt && value.expiresAt - Date.now() < 6 * 3600000).length), inline: true },

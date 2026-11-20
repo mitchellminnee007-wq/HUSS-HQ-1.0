@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -58,11 +58,7 @@ function releaseRollover(guildId) {
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
 
-  try {
-    return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
-  } catch {
-    return { guilds: {} };
-  }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
@@ -75,9 +71,7 @@ function writeStore(data) {
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
 }
 
-function isOfficer(member) {
-  return member.roles.cache.some(role => OFFICER_RANKS.includes(role.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
 function roleName(role) {
   return role ? `${role.name} (${role.id})` : 'Not found';
@@ -143,7 +137,7 @@ function buildActivityCheckMessage(roleName, endUnix) {
 
 // ── Core rollover logic ───────────────────────────────────────────────────────
 
-async function executeRollover(guild, notifyChannelId, dryRun = false) {
+async function executeRollover(guild, notifyChannelId, dryRun = false, activeIds = null) {
   console.log(`[Rollover] Starting rollover for guild: ${guild.name} (${guild.id})`);
   console.log(`[Rollover] Dry run: ${dryRun}`);
 
@@ -220,7 +214,7 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
       continue;
     }
 
-    const hasActiveRole = activeRole && member.roles.cache.has(activeRole.id);
+    const hasActiveRole = activeIds ? activeIds.has(member.id) : activeRole && member.roles.cache.has(activeRole.id);
 
     // Active members keep their roles and are skipped completely
     if (hasActiveRole) {
@@ -245,6 +239,9 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
         alliesFailed++;
         console.warn(`[Rollover] Could not remove ally role from ${member.user.tag}:`, err.message);
       }
+      // Allies are not departing regiment members. Never fall through to the
+      // member reset, including dry runs or a failed Ally-role removal.
+      continue;
     }
 
     // Inactive members lose normal roles and get Unverified + Former Member
@@ -310,12 +307,12 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
 
     if (channel) {
       const embed = new EmbedBuilder()
-        .setColor(dryRun ? 0x3498DB : 0xF39C12)
-        .setTitle(dryRun ? '🔍 Rollover Dry Run Result' : '🔄 Automatic Rollover Complete')
+        .setColor(dryRun ? 0xD4AF37 : 0xF39C12)
+        .setTitle(dryRun ? '🔍 Rollover Dry Run Result' : '🔄 Commander-approved Rollover Complete')
         .setDescription(
           dryRun
-            ? `Dry run for the **${ROLLOVER_DAYS}-day** rollover. No changes were applied.`
-            : `The **${ROLLOVER_DAYS}-day** rollover has executed.`
+            ? 'Rollover preview. No changes were applied.'
+            : 'The Commander-approved rollover has executed.'
         )
         .addFields(
           { name: 'Allies removed', value: `${alliesRemoved}`, inline: true },
@@ -354,263 +351,22 @@ async function executeRollover(guild, notifyChannelId, dryRun = false) {
   };
 }
 
-// ── Background checker ────────────────────────────────────────────────────────
-
-async function checkScheduledRollovers(client) {
-  const store = readStore();
-  let changed = false;
-
-  for (const [guildId, entry] of Object.entries(store.guilds)) {
-    if (Date.now() < entry.executeAt) continue;
-
-    const guild = client.guilds.cache.get(guildId);
-
-    if (!guild) {
-      console.warn(`[Rollover] Guild ${guildId} not found in cache. Removing scheduled rollover.`);
-      delete store.guilds[guildId];
-      changed = true;
-      continue;
-    }
-
-    try {
-      const gate = acquireRollover(guildId);
-      if (!gate.allowed) {
-        console.warn(`[Rollover] Skipping scheduled run for guild ${guildId}: ${gate.reason}.`);
-        continue;
-      }
-
-      const result = await executeRollover(guild, entry.notifyChannelId, false);
-
-      console.log(
-        `[Rollover] Executed for guild ${guildId} — ` +
-        `alliesRemoved=${result.alliesRemoved}, ` +
-        `membersReset=${result.membersReset}, ` +
-        `activeMembersSkipped=${result.activeMembersSkipped}, ` +
-        `rolesRemoved=${result.rolesRemoved}, ` +
-        `rolesFailed=${result.rolesFailed}`
-      );
-      delete store.guilds[guildId];
-      changed = true;
-    } catch (err) {
-      console.error(`[Rollover] Failed for guild ${guildId}:`, err);
-    } finally {
-      if (rolloverInProgress.has(guildId)) releaseRollover(guildId);
-    }
-  }
-
-  if (changed) {
-    writeStore(store);
-  }
-}
-
-// ── Module export ─────────────────────────────────────────────────────────────
-
+// Legacy commands remain discoverable, but cannot bypass the war lifecycle.
 module.exports = {
-  // /startrollover
-  data: new SlashCommandBuilder()
-    .setName('startrollover')
-    .setDescription(`Schedule the rollover: reset non-active members in ${ROLLOVER_DAYS} days.`)
-    .addBooleanOption(option => option.setName('confirm').setDescription('Confirm clearing activity roles and scheduling the member reset').setRequired(true))
-    .setDMPermission(false),
-
-  async execute(interaction) {
-    if (!isOfficer(interaction.member)) {
-      return interaction.reply({
-        content: 'Only Officers and Commanders can schedule a rollover.',
-        ephemeral: true
-      });
-    }
-
-    if (!interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'No changes made. This clears current activity roles and schedules an automatic member reset. Set confirm:True to start.', ephemeral: true });
-
-    const store = readStore();
-
-    if (store.guilds[interaction.guildId]) {
-      const existing = store.guilds[interaction.guildId];
-      const remainingMs = existing.executeAt - Date.now();
-      const remainingHours = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60)));
-
-      return interaction.reply({
-        content: `A rollover is already scheduled in approximately **${remainingHours} hour(s)**. Use \`/cancelrollover\` first to reschedule.`,
-        ephemeral: true
-      });
-    }
-
-    const gate = acquireRollover(interaction.guildId);
-    if (!gate.allowed) {
-      return interaction.reply({
-        content: 'A rollover is already running or was just started. Please wait before trying again.',
-        ephemeral: true
-      });
-    }
-
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      const cleared = await clearActiveMembers(interaction.guild);
-      if (!cleared.role) {
-        return interaction.editReply('The Active Member role was not found. No rollover was scheduled.');
-      }
-
-      const executeAt = Date.now() + ROLLOVER_MS;
-      store.guilds[interaction.guildId] = {
-        executeAt,
-        notifyChannelId: interaction.channelId,
-        startedBy: interaction.user.id
-      };
-      writeStore(store);
-
-      const timestamp = Math.floor(executeAt / 1000);
-      const roleName = cleared.role.name;
-      const activityMessage = await interaction.channel.send(buildActivityCheckMessage(roleName, timestamp));
-      require('../utils/activity-store').register(activityMessage, interaction.guildId, timestamp);
-
-      const embed = new EmbedBuilder()
-        .setColor(0xF39C12)
-        .setTitle('⏳ Rollover Scheduled')
-        .setDescription(
-          `The existing **${roleName}** roster was cleared. Members must click **Mark Active** in the activity check message to stay active.\n\n` +
-          `In **${ROLLOVER_DAYS} days**, members without the active role will have their roles removed and receive <@&${configuredRoles(interaction.guildId).unverified}> and <@&${configuredRoles(interaction.guildId).former}>.`
-        )
-        .addFields(
-          { name: 'Members cleared', value: `${cleared.removed}`, inline: true },
-          { name: 'Could not clear', value: `${cleared.failed}`, inline: true },
-          { name: 'Executes at', value: `<t:${timestamp}:F> (<t:${timestamp}:R>)` }
-        )
-        .setFooter({ text: `Scheduled by ${interaction.user.tag} • Powered by Hypha` })
-        .setTimestamp();
-
-      return interaction.editReply({ embeds: [embed] });
-    } catch (error) {
-      console.error('[Rollover] Could not start rollover:', error);
-      return interaction.editReply('Could not start the rollover. Check the bot console for details.');
-    } finally {
-      releaseRollover(interaction.guildId);
-    }
+  executeRollover, clearActiveMembers,
+  data: new SlashCommandBuilder().setName('startrollover').setDescription('Open the Commander-approved war lifecycle.').setDMPermission(false),
+  cancelData: new SlashCommandBuilder().setName('cancelrollover').setDescription('Cancel a legacy automatic rollover schedule.').setDMPermission(false),
+  runData: new SlashCommandBuilder().setName('runrollover').setDescription('Preview role changes; use /warflow preview for actual rollover.').setDMPermission(false)
+    .addBooleanOption(o=>o.setName('dry').setDescription('Preview only; false redirects to warflow')),
+  async execute(i){return i.reply({content:'Use /warflow status. A Commander must approve the activity check and separately confirm rollover after 48 hours.',ephemeral:true});},
+  async executeCancel(i){
+    if(!require('../utils/squad-store').commander(await i.guild.members.fetch(i.user.id)))return i.reply({content:'Commander role required.',ephemeral:true});
+    const data=readStore();delete data.guilds[i.guildId];writeStore(data);audit.record(i,'rollover.legacy_cancel',null);
+    return i.reply({content:'Legacy automatic schedule removed. New warflow approvals are separate.',ephemeral:true});
   },
-
-  // /cancelrollover
-  cancelData: new SlashCommandBuilder()
-    .setName('cancelrollover')
-    .setDescription('Cancel a pending automatic rollover.')
-    .setDMPermission(false),
-
-  async executeCancel(interaction) {
-    if (!isOfficer(interaction.member)) {
-      return interaction.reply({
-        content: 'Only Officers and Commanders can cancel a rollover.',
-        ephemeral: true
-      });
-    }
-
-    const store = readStore();
-
-    if (!store.guilds[interaction.guildId]) {
-      return interaction.reply({
-        content: 'There is no rollover scheduled for this server.',
-        ephemeral: true
-      });
-    }
-
-    delete store.guilds[interaction.guildId];
-    writeStore(store);
-
-    return interaction.reply({
-      content: '✅ Scheduled rollover has been **cancelled**.',
-      ephemeral: true
-    });
+  async executeRun(i){
+    if(!isOfficer(i.member))return i.reply({content:'Officer access required.',ephemeral:true});
+    return i.reply({content:'Use /warflow preview after the approved activity check closes. This provides a preview based on the correct response roster.',ephemeral:true});
   },
-
-  // /runrollover
-  runData: new SlashCommandBuilder()
-    .setName('runrollover')
-    .setDescription('Run the rollover immediately for testing. Officers only.')
-    .addBooleanOption(option =>
-      option
-        .setName('dry')
-        .setDescription('Dry run — do not apply changes')
-        .setRequired(false)
-    )
-    .addBooleanOption(option => option.setName('confirm').setDescription('Confirm changing member roles when dry is false.').setRequired(false))
-    .setDMPermission(false),
-
-  async executeRun(interaction) {
-    if (!isOfficer(interaction.member)) {
-      return interaction.reply({
-        content: 'Only Officers and Commanders can run the rollover.',
-        ephemeral: true
-      });
-    }
-
-    const dry = interaction.options.getBoolean('dry') ?? true;
-    if (!dry && !interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'Run /runrollover first for a preview. To apply changes use dry:False confirm:True.', ephemeral: true });
-
-    const gate = acquireRollover(interaction.guildId);
-    if (!gate.allowed) {
-      const message = gate.reason === 'cooldown'
-        ? `Please wait ${Math.ceil(gate.remainingMs / 1000)} seconds before running another rollover.`
-        : 'A rollover is already running for this server. Please wait for it to finish.';
-      return interaction.reply({ content: message, ephemeral: true });
-    }
-
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      const result = await executeRollover(interaction.guild, interaction.channelId, dry);
-      audit.record(interaction, dry ? 'rollover.preview' : 'rollover.run', null, { membersReset: result.membersReset, rolesRemoved: result.rolesRemoved });
-
-      return interaction.editReply({
-        content:
-          `Rollover ${dry ? 'dry run completed' : 'executed'}.\n\n` +
-          `Active members skipped: **${result.activeMembersSkipped}**\n` +
-          `Members reset: **${result.membersReset}**\n` +
-          `Allies removed: **${result.alliesRemoved}**\n` +
-          `Roles removed: **${result.rolesRemoved}**\n` +
-          `Role actions failed: **${result.rolesFailed}**\n\n` +
-          `Active role used: <@&${ACTIVE_ROLE_ID}>\n` +
-          `Check your bot console for detailed role errors.`
-      }).catch(async replyError => {
-        if (replyError.code !== 50027) throw replyError;
-        await interaction.channel.send({
-          content:
-            `Rollover ${dry ? 'dry run completed' : 'executed'} in the channel.\n\n` +
-            `Active members skipped: **${result.activeMembersSkipped}**\n` +
-            `Members reset: **${result.membersReset}**\n` +
-            `Allies removed: **${result.alliesRemoved}**\n` +
-            `Roles removed: **${result.rolesRemoved}**\n` +
-            `Role actions failed: **${result.rolesFailed}**`
-        }).catch(() => {});
-      });
-    } catch (err) {
-      console.error('[Rollover] Manual run failed:', err);
-
-      return interaction.editReply({
-        content: 'Rollover failed to run. Check your bot console for details.'
-      });
-    } finally {
-      releaseRollover(interaction.guildId);
-    }
-  },
-
-  // Background checker - call once on bot startup
-  init(client) {
-    if (intervalStarted) {
-      console.warn('[Rollover] init() was called more than once. Ignoring duplicate interval.');
-      return;
-    }
-
-    intervalStarted = true;
-
-    console.log('[Rollover] Background checker started.');
-
-    checkScheduledRollovers(client).catch(err => {
-      console.error('[Rollover] Startup check failed:', err);
-    });
-
-    setInterval(() => {
-      checkScheduledRollovers(client).catch(err => {
-        console.error('[Rollover] Scheduled check failed:', err);
-      });
-    }, CHECK_INTERVAL);
-  }
+  init(){console.log('[Rollover] Legacy automatic scheduling disabled; using Commander approvals.');}
 };

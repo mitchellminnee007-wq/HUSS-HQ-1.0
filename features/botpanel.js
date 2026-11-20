@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -18,9 +18,7 @@ const OFFICER_RANKS = ['Officer', 'Commander'];
 const DEFAULT_WAR_ROLE_ID = '1424722021325082625';
 const DEFAULT_ACTIVITY_TIMER_MINUTES = 5760;
 
-function isOfficer(member) {
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
 function getWarRoleId(guildId) {
   return getConfig(guildId, 'ACTIVE_WAR_ROLE_ID') ?? DEFAULT_WAR_ROLE_ID;
@@ -34,11 +32,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 function readKCStore() {
   if (!fs.existsSync(KC_STORE_PATH)) return { guilds: {} };
 
-  try {
-    return JSON.parse(fs.readFileSync(KC_STORE_PATH, 'utf8'));
-  } catch {
-    return { guilds: {} };
-  }
+  return JSON.parse(fs.readFileSync(KC_STORE_PATH, 'utf8'));
 }
 
 function writeKCStore(data) {
@@ -135,11 +129,7 @@ const FORMER_MEMBER_ROLE_ID = '1426128855202271242';
 function readRolloverStore() {
   if (!fs.existsSync(ROLLOVER_STORE_PATH)) return { guilds: {} };
 
-  try {
-    return JSON.parse(fs.readFileSync(ROLLOVER_STORE_PATH, 'utf8'));
-  } catch {
-    return { guilds: {} };
-  }
+  return JSON.parse(fs.readFileSync(ROLLOVER_STORE_PATH, 'utf8'));
 }
 
 function writeRolloverStore(data) {

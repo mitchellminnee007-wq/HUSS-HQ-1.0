@@ -1,0 +1,29 @@
+const {SlashCommandBuilder,EmbedBuilder}=require('discord.js');
+const squads=require('../utils/squad-store'),{isOfficer}=require('../utils/ranks'),ops=require('./operations'),qual=require('../utils/qualifications');
+const locks=new Set();
+const data=new SlashCommandBuilder().setName('operation-team').setDescription('Connect squads and qualifications to operations').setDMPermission(false);
+for(const name of ['assign','unassign','roster','briefing'])data.addSubcommand(s=>{
+ s.setName(name).setDescription({assign:'Assign a squad and optional recommended qualification (officers)',unassign:'Remove a squad assignment (officers)',roster:'View squad RSVPs and qualification readiness',briefing:'Post an RSVP invitation in the operation channel'}[name]);s.addStringOption(o=>o.setName('operation').setDescription('Choose an upcoming operation').setRequired(true).setAutocomplete(true));
+ if(name==='assign'){s.addStringOption(o=>o.setName('squad').setDescription('Approved squad').setRequired(true).setAutocomplete(true));s.addStringOption(o=>o.setName('qualification').setDescription('Recommended qualification; does not award or block signups').addChoices(...require('./training').QUALIFICATIONS.map(q=>({name:q.name,value:q.key}))));}
+ if(name==='roster')s.addIntegerOption(o=>o.setName('page').setDescription('Roster page').setMinValue(1));return s;
+});
+async function visible(i,id){const op=ops.getOp(i.guildId,id);if(!op||!await qual.canSee(i.member,op.channelId))throw new Error('Operation not found or not accessible.');const latest=ops.getOp(i.guildId,id);if(!latest)throw new Error('Operation no longer exists.');return latest;}
+function squad(i,id){const s=squads.get(squads.read().guilds[i.guildId]||{},id);if(s.status!=='approved'||!squads.visible(i.member,s))throw new Error('Choose an approved accessible squad.');return s;}
+async function execute(i){await i.deferReply({ephemeral:true});const lock=i.guildId+':'+i.options.getString('operation');if(locks.has(lock))return i.editReply('Another team action is processing. Please retry.');locks.add(lock);try{i.member=await i.guild.members.fetch({user:i.user.id,force:true});squads.ensureMember(i.member);const action=i.options.getSubcommand(),id=i.options.getString('operation'),op=await visible(i,id);
+ if(['assign','unassign'].includes(action)){
+  if(!isOfficer(i.member))throw new Error('Only officers can change operation assignments.');
+  if(action==='assign'){const s=squad(i,i.options.getString('squad'));op.squadId=s.id;op.squadName=s.name;op.qualificationKey=i.options.getString('qualification')||null;}else{delete op.squadId;delete op.squadName;delete op.qualificationKey;}
+  ops.saveOp(i.guildId,id,op);require('../utils/audit').record(i,'operation.squad_'+action,id,{squadId:op.squadId,qualification:op.qualificationKey});await ops.refreshOpMessage(i,op,id);return i.editReply('Operation assignment saved. No member was signed up or certified automatically.');
+ }
+ const s=squad(i,op.squadId);if(!isOfficer(i.member)&&!squads.manage(i.member,s))throw new Error('This squad leader, department leadership or an officer can coordinate its roster.');
+ if(action==='briefing'){
+  if(op.time<=Date.now())throw new Error('This operation has already started.');if(op.lastSquadBriefing&&Date.now()-op.lastSquadBriefing<3600000)throw new Error('An invitation was already posted within the last hour.');
+  const channel=await i.guild.channels.fetch(op.channelId);await channel.send({content:`**${s.name} — operation invitation**\n${op.title}\n<t:${Math.floor(op.time/1000)}:F>\nSquad members: please record your own RSVP on the operation panel.\nhttps://discord.com/channels/${i.guildId}/${op.channelId}/${id}`,allowedMentions:{parse:[]}});
+  // Re-read after sending so concurrent RSVPs are retained.
+  const latest=ops.getOp(i.guildId,id);if(latest){latest.lastSquadBriefing=Date.now();ops.saveOp(i.guildId,id,latest);}require('../utils/audit').record(i,'operation.squad_briefing',id);return i.editReply('Invitation posted in the operation channel without pings. Each member chooses their own RSVP.');
+ }
+ const pages=Math.max(1,Math.ceil(s.members.length/12)),page=Math.min(pages,i.options.getInteger('page')||1),lines=[];
+ for(const userId of s.members.slice((page-1)*12,page*12)){const m=await i.guild.members.fetch(userId).catch(()=>null);const rsvp=['accepted','declined','tentative'].find(k=>op.attendees?.[k]?.some(x=>x.id===userId))||'No RSVP';const q=!op.qualificationKey?'':!m?' • Member unavailable':qual.qualified(m,op.qualificationKey)===null?' • Qualification not configured':qual.qualified(m,op.qualificationKey)?' • Qualified':' • Not certified';lines.push(`<@${userId}> — ${rsvp}${q}`);}
+ return i.editReply({embeds:[new EmbedBuilder().setColor(0x8b2525).setTitle(`${s.name} • Operation readiness`).setDescription(lines.join('\n')||'No members').setFooter({text:`Page ${page}/${pages} • RSVP is not attendance; qualifications require assessment`})],allowedMentions:{parse:[]}});
+ }catch(e){return i.editReply({content:e.message,allowedMentions:{parse:[]}});}finally{locks.delete(lock);}}
+module.exports={data,execute,async autocomplete(i){try{i.member=await i.guild.members.fetch(i.user.id);squads.ensureMember(i.member);const f=i.options.getFocused(true),q=f.value.toLowerCase();if(f.name==='squad')return i.respond(Object.values(squads.read().guilds[i.guildId]?.squads||{}).filter(s=>s.status==='approved'&&squads.visible(i.member,s)&&s.name.toLowerCase().includes(q)).slice(0,25).map(s=>({name:s.name,value:s.id})));const result=[];for(const[id,op]of Object.entries(ops.readStore().guilds[i.guildId]||{})){if(op.time>Date.now()&&op.title.toLowerCase().includes(q)&&await qual.canSee(i.member,op.channelId))result.push({name:op.title.slice(0,100),value:id});if(result.length===25)break;}return i.respond(result);}catch{return i.respond([]);}}};

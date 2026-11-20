@@ -4,6 +4,7 @@ const { Client, Collection, GatewayIntentBits, Events, ActivityType, Partials } 
 const dotenv = require('dotenv');
 
 dotenv.config();
+require('./utils/data-fs').bootstrap();
 
 const cleanEnvValue = (value) => value?.split('//')[0].trim();
 const token = cleanEnvValue(process.env.DISCORD_TOKEN);
@@ -16,6 +17,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
@@ -85,6 +87,46 @@ client.once(Events.ClientReady, () => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+  require('./utils/health').attach(interaction);
+  if ((interaction.isButton() || interaction.isModalSubmit()) && interaction.customId.startsWith('cx_')) {
+    const name=interaction.customId.split(':')[0].slice(3);
+    if(!['hub','feedback','absence','notifications','onboarding','debrief','squad-review','wararchive'].includes(name))return;
+    try { await client.commands.get(name).handle(interaction); }
+    catch(e){const reply={content:e.message||'Could not complete this action.',ephemeral:true,allowedMentions:{parse:[]}};if(interaction.deferred||interaction.replied)await interaction.followUp(reply).catch(()=>{});else await interaction.reply(reply).catch(()=>{});}
+    return;
+  }
+  if((interaction.isButton()||interaction.isStringSelectMenu())&&/^(aq_|nav_)/.test(interaction.customId||'')){try{if(await require('./utils/maintenance').guard(interaction))return;await client.commands.get(interaction.customId.startsWith('aq_')?'approvals':'help').handle(interaction);}catch(e){require('./utils/health').record('interaction_failure',0,interaction.guildId);console.error('[Navigation]',e.message);}return;}
+  if(interaction.isButton()&&interaction.customId.startsWith('me_')) {
+    try { if(await require('./utils/maintenance').guard(interaction))return;await client.commands.get('me').handle(interaction); } catch(e){console.error('[Dashboard]',e.message);}
+    return;
+  }
+  if(['stockpile','order','manifest'].includes(interaction.commandName)||/^(sp_|ord_|mf_)/.test(interaction.customId||''))require('./utils/live-panels').attach(interaction);
+  if ((interaction.isButton() || interaction.isStringSelectMenu()) && /^(sq_|wf_)/.test(interaction.customId)) {
+    try { if (await require('./utils/maintenance').guard(interaction)) return; await client.commands.get(interaction.customId.startsWith('sq_') ? 'squad' : 'warflow').handle(interaction); }
+    catch(error) { console.error('Squad/war action failed:',error.message); const payload={content:'Could not complete this action. Please retry.',ephemeral:true}; if(interaction.deferred||interaction.replied)await interaction.followUp(payload).catch(()=>{});else await interaction.reply(payload).catch(()=>{}); }
+    return;
+  }
+  try { if (await require('./utils/maintenance').guard(interaction)) return; }
+  catch (error) { console.error('Maintenance check failed:', error.message); return; }
+  if ((interaction.isButton() || interaction.isStringSelectMenu() || interaction.isUserSelectMenu() || interaction.isModalSubmit()) && interaction.customId.startsWith('cm_')) {
+    try { await client.commands.get('commendation')[interaction.isButton() ? 'handleButton' : interaction.isModalSubmit() ? 'handleModal' : 'handleSelect'](interaction); }
+    catch (error) {
+      console.error('Commendation action failed:', error.message);
+      const payload = {content:'Could not complete this commendation action. Refresh and try again.',ephemeral:true};
+      if(interaction.deferred||interaction.replied)await interaction.followUp(payload).catch(()=>{});else await interaction.reply(payload).catch(()=>{});
+    }
+    return;
+  }
+  if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('mf_')) {
+    try { await client.commands.get('manifest')[interaction.isButton() ? 'handleButton' : 'handleSelect'](interaction); }
+    catch (error) {
+      console.error('Manifest panel failed:', error.message);
+      const payload = { content: 'Could not update the manifest. Refresh and try again.', ephemeral: true };
+      if (interaction.deferred || interaction.replied) await interaction.followUp(payload).catch(() => {});
+      else await interaction.reply(payload).catch(() => {});
+    }
+    return;
+  }
   if (interaction.isAutocomplete()) {
     const command = client.commands.get(interaction.commandName);
     try { if (command?.autocomplete) await command.autocomplete(interaction); else await interaction.respond([]); }
@@ -114,6 +156,16 @@ client.on(Events.InteractionCreate, async interaction => {
     return;
   }
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith('botstatus:')) {
+      try { await client.commands.get('botstatus').handleButton(interaction); }
+      catch (error) {
+        console.error('Bot status refresh failed:', error.message);
+        const message = { content: 'Could not refresh the status. Try again shortly.', ephemeral: true };
+        if (interaction.deferred || interaction.replied) await interaction.followUp(message).catch(() => {});
+        else await interaction.reply(message).catch(() => {});
+      }
+      return;
+    }
     const [handlerName] = interaction.customId.split(':');
 
     if (handlerName === 'warning_vote') {
@@ -521,4 +573,6 @@ for (const file of featureFiles) {
   }
 }
 
+require('./utils/live-panels').init(client);
+require('./utils/health').init(client);
 client.login(token);

@@ -4,17 +4,19 @@ const audit = require('../utils/audit');
 
 const { ranks, matchesRank } = require('../utils/ranks');
 
-function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
-}
+const { getMemberRank } = require('../utils/ranks');
 
 function getRoleByName(guild, roleName) {
+  if (ranks.includes(roleName)) return require('../utils/ranks').getRankRole(guild,roleName);
+  const key = roleName === 'Member' ? 'VERIFIED_MEMBER_ROLE_ID' : `${roleName.toUpperCase().replaceAll(' ', '_')}_ROLE_ID`;
+  const configured = getConfig(guild.id,key);
+  if(configured)return guild.roles.cache.get(configured)||null;
   const normalized = roleName.toLowerCase();
   return guild.roles.cache.find(role => role.name.toLowerCase() === normalized || matchesRank(role, roleName)) || null;
 }
 
 function getMemberRankRoles(member) {
-  return ranks.filter(rank => member.roles.cache.some(role => matchesRank(role, rank)));
+  return ranks.filter(rank => require('../utils/ranks').hasRank(member,rank));
 }
 
 function canAffectRank(executorRank, targetRank) {

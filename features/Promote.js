@@ -8,27 +8,17 @@ const promotionLimits = {
   Commander: 'Officer',
 };
 
-function matchesRank(role, rank) {
-  return role.name === rank || (rank === 'Hussar' && role.name === 'Hussars');
-}
-
-function getMemberRank(member) {
-  return ranks.slice().reverse().find(rank => member.roles.cache.some(role => matchesRank(role, rank))) || null;
-}
-
-function getRankRole(guild, rank) {
-  return guild.roles.cache.find(role => role.name === rank)
-    || guild.roles.cache.find(role => matchesRank(role, rank)) || null;
-}
+const { getMemberRank, getRankRole, getMemberRankRoles } = require('../utils/ranks');
 
 function getRoleByName(guild, roleName) {
+  const key=roleName==='Member'?'VERIFIED_MEMBER_ROLE_ID':`${roleName.toUpperCase().replaceAll(' ', '_')}_ROLE_ID`;
+  const id=getConfig(guild.id,key);
+  if(id)return guild.roles.cache.get(id)||null;
   const normalized = roleName.toLowerCase();
   return guild.roles.cache.find(role => role.name.toLowerCase() === normalized) || null;
 }
 
-function getMemberRankRoles(member) {
-  return [...member.roles.cache.values()].filter(role => ranks.some(rank => matchesRank(role, rank)));
-}
+
 
 module.exports = {
   data: new SlashCommandBuilder()

@@ -1,0 +1,19 @@
+# HUSS HQ — THIS WAR & NEXT WAR
+
+## Available this war
+• **Personal dashboard:** Use /me to find your squads, orders, shipments, events, training and pending requests in one place.
+• **Live logistics views:** Open stockpile, order and manifest browsers now refresh after logistics changes. Access is checked again before updates. Reopen the browser after a restart or when the live session expires.
+• **Shared war records:** Matching records now use the same Able war identity for more consistent reporting. Existing inventory, open orders and history are preserved.
+• **Training & qualifications:** Training prerequisites and readiness checks use the same qualification roles. Signing up does not automatically certify you.
+• **Recruitment shortcuts:** New verification follow-up tickets include buttons for recruiting squads, training, available tasks and your dashboard.
+• **Squads remain available:** Existing squads and pending requests can continue normally.
+
+## Planned for next war
+**Squads ↔ Operations coordination** is prepared but remains under maintenance until the next-war release.
+Officers will be able to assign squads and recommended qualifications to operations. Squad leaders will be able to review their roster’s RSVPs and qualification status and post a briefing invitation.
+Existing operations remain available. Members still choose their own RSVPs; squad leadership does not grant officer permissions.
+
+## TTS
+**TTS will be available shortly.**
+
+War summaries remain active. Activity checks and rollover still require Commander approval, with a full 48-hour activity response window.

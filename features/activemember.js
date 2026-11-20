@@ -12,9 +12,7 @@ const DEFAULT_ACTIVITY_ROLE_ID = '1424722021325082625';
 const OFFICER_RANKS = ['Officer', 'Commander'];
 const DEFAULT_TIMER_MINUTES = 5760;
 
-function isOfficer(member) {
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
-}
+const { isOfficer } = require('../utils/ranks');
 
 function getActivityRoleId(guildId) {
   return getConfig(guildId, 'ACTIVE_WAR_ROLE_ID') ?? DEFAULT_ACTIVITY_ROLE_ID;
@@ -63,6 +61,7 @@ module.exports = {
     .setDMPermission(false),
 
   async execute(interaction) {
+    if (getConfig(interaction.guildId,"WARFLOW_ENABLED")) return interaction.reply({content:"Activity is managed through /warflow and the current Commander-approved activity panel.",ephemeral:true});
     if (!isOfficer(interaction.member)) {
       return interaction.reply({
         content: 'Only Officers and Commanders can post an activity check.',
@@ -137,6 +136,7 @@ module.exports = {
     .setDMPermission(false),
 
   async executeReset(interaction) {
+    if (getConfig(interaction.guildId,"WARFLOW_ENABLED")) return interaction.reply({content:"Activity is managed through /warflow and the current Commander-approved activity panel.",ephemeral:true});
     if (!interaction.options.getBoolean('confirm')) return interaction.reply({ content: 'Roster reset cancelled.', ephemeral: true });
     try {
       if (!isOfficer(interaction.member)) {
@@ -238,6 +238,7 @@ module.exports = {
   },
 
   async handleButton(interaction) {
+    if (getConfig(interaction.guildId,"WARFLOW_ENABLED")) return interaction.reply({content:"Activity is managed through /warflow and the current Commander-approved activity panel.",ephemeral:true});
     const parts = interaction.customId.split('_');
     const action = parts[1];
     const endUnix = Number(parts[2]);

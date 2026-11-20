@@ -126,4 +126,7 @@ async function handleModal(interaction) {
     return await interaction.reply({ content: action === 'code' ? 'Reserve code saved.' : 'Reported timer saved. This does not refresh the stockpile in Foxhole.', ...payload, ephemeral: true });
   } catch (error) { return interaction.reply({ content: error.message, ephemeral: true, allowedMentions: { parse: [] } }); }
 }
+const originalList=listPayload,originalDetail=detailPayload;
+listPayload=(g,m,page=1)=>require('./live-panels').tagged(originalList(g,m,page),{kind:'stockpile',page});
+detailPayload=(g,m,id,page=1,filter='all')=>require('./live-panels').tagged(originalDetail(g,m,id,page,filter),{kind:'stockpile',id,page,filter});
 module.exports = { sharedPayload, listPayload, detailPayload, guildData, visible, autocomplete, handleButton, handleSelect, handleModal };

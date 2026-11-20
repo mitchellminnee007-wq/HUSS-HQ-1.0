@@ -1,17 +1,22 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const file = path.join(__dirname, '..', 'data', 'logistics-inventory.json');
 const units = ['crates', 'items', 'vehicles', 'shippable_crates'];
 function key(item, unit) { return `${item.trim().toLowerCase()}|${unit}`; }
 function read() { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { guilds: {} }; }
-function transact(guildId, operation) {
+function transact(guildId,fn){return fs.transaction?fs.transaction(()=>transactUnlocked(guildId,fn)):transactUnlocked(guildId,fn);}
+function transactUnlocked(guildId, operation) {
   const store = read();
   const guild = store.guilds[guildId] ||= { stockpiles: {}, orders: {} };
+  const before=new Set(Object.keys(guild.orders||{}));
+  require('./war-context').logistics(guildId,guild);
   const result = operation(guild);
+  require('./war-context').logistics(guildId,guild,new Set(Object.keys(guild.orders||{}).filter(id=>!before.has(id))));
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(store, null, 2));
   fs.renameSync(`${file}.tmp`, file);
+  require('./live-panels').changed(guildId);
   return result;
 }
 function quantity(value, zero = false) {
@@ -23,8 +28,8 @@ function pile(guild, id) {
   return value;
 }
 function reserved(guild, id, itemKey) {
-  return Object.values(guild.orders).filter(order => order.sourceId === id && order.itemKey === itemKey && !['cancelled', 'delivered'].includes(order.status))
-    .reduce((sum, order) => sum + order.quantity - order.delivered - order.transit, 0);
+  return Object.values(guild.orders).filter(order => order.sourceId === id && order.itemKey === itemKey && !['cancelled', 'delivered', 'completed_with_losses'].includes(order.status))
+    .reduce((sum, order) => sum + order.quantity - order.delivered - order.transit - (order.lost || 0), 0);
 }
 function available(guild, id, itemKey) { return (pile(guild, id).inventory[itemKey]?.quantity || 0) - reserved(guild, id, itemKey); }
 function createStockpile(guild, input) {
@@ -56,19 +61,19 @@ function createOrder(guild, input) {
   if (input.sourceId && available(guild, input.sourceId, itemKey) < input.quantity) throw new Error('Insufficient unreserved stock. Update the counted inventory or reduce the order.');
   if (input.destinationId) {
     const destination = pile(guild, input.destinationId);
-    if (input.sourceId && pile(guild, input.sourceId).war.trim().toLowerCase() !== destination.war.trim().toLowerCase()) throw new Error('Source and destination must belong to the same shard / war.');
+    if (input.sourceId && !require('./war-context').same(pile(guild, input.sourceId),destination)) throw new Error('Source and destination must belong to the same shard / war.');
     if (input.destinationId === input.sourceId) throw new Error('Source and destination stockpiles must differ.');
   }
   const id = randomUUID().slice(0, 8);
   if (guild.orders[id]) throw new Error('ID collision; retry.');
-  const order = { ...input, id, itemKey, delivered: 0, transit: 0, status: 'open', workerId: null, createdAt: Date.now(), updates: [] };
+  const order = { ...input, id, itemKey, delivered: 0, lost: 0, transit: 0, status: 'open', workerId: null, createdAt: Date.now(), updates: [] };
   guild.orders[id] = order;
   return order;
 }
 function updateOrder(guild, id, action, actorId, officer, amount, note) {
   const order = guild.orders[id];
   if (!order) throw new Error('Order not found in this server.');
-  if (['cancelled', 'delivered'].includes(order.status)) throw new Error('This order is already closed.');
+  if (['cancelled', 'delivered', 'completed_with_losses'].includes(order.status)) throw new Error('This order is already closed.');
   if (action === 'claim') {
     if (order.workerId && order.workerId !== actorId) throw new Error('Another member already claimed this order.');
     order.workerId = actorId; order.status = order.transit ? 'in_transit' : 'claimed';
@@ -82,7 +87,7 @@ function updateOrder(guild, id, action, actorId, officer, amount, note) {
       quantity(amount);
       if (action === 'pickup' || action === 'produce') {
         if ((action === 'produce') !== (order.type === 'production')) throw new Error('Use produce for production orders and pickup for transport orders.');
-        if (amount > order.quantity - order.delivered - order.transit) throw new Error('Amount exceeds the remaining order quantity.');
+        if (amount > order.quantity - order.delivered - order.transit - (order.lost || 0)) throw new Error('Amount exceeds the remaining order quantity.');
         if (order.sourceId) {
           const source = pile(guild, order.sourceId);
           if ((source.inventory[order.itemKey]?.quantity || 0) < amount) throw new Error('Source stock is insufficient.');
@@ -99,8 +104,15 @@ function updateOrder(guild, id, action, actorId, officer, amount, note) {
           entry.quantity += amount; destination.updatedAt = Date.now();
         }
         order.transit -= amount; order.delivered += amount;
-        order.status = order.delivered === order.quantity ? 'delivered' : order.transit ? 'in_transit' : 'claimed';
-        if (order.status === 'delivered') order.completedAt = Date.now();
+        order.status = order.delivered + (order.lost || 0) === order.quantity ? (order.lost ? 'completed_with_losses' : 'delivered') : order.transit ? 'in_transit' : 'claimed';
+        if (['delivered','completed_with_losses'].includes(order.status)) order.completedAt = Date.now();
+      } else if (action === 'loss') {
+        if (amount > order.transit) throw new Error('Loss cannot exceed cargo currently in transit.');
+        if (!note?.trim()) throw new Error('A loss reason and location or incident details are required.');
+        order.transit -= amount;
+        order.lost = (order.lost || 0) + amount;
+        order.status = order.delivered + order.lost === order.quantity ? 'completed_with_losses' : order.transit ? 'in_transit' : 'claimed';
+        if (order.status === 'completed_with_losses') order.completedAt = Date.now();
       } else if (action === 'return') {
         if (!order.sourceId || amount > order.transit) throw new Error('Only goods in transit from a source stockpile can be returned.');
         const source = pile(guild, order.sourceId);

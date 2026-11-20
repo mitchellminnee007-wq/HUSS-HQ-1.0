@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 function readData(name) {
   const file = path.join(__dirname, '..', 'data', `${name}.json`);

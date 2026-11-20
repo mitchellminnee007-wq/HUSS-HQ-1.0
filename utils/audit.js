@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 const file = path.join(__dirname, '..', 'data', 'audit.jsonl');
 function record(interaction, action, targetId, details = {}) {

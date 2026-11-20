@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('./data-fs');
 const path = require('node:path');
 
 const DATABASE_PATH = path.join(__dirname, '..', 'data', 'foxhole_factory_mpf_with_icons.json');

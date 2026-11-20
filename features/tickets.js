@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('../utils/data-fs');
 const path = require('node:path');
 const {
   SlashCommandBuilder,
@@ -28,8 +28,7 @@ const TICKET_TYPES = {
 // ── Store helpers ─────────────────────────────────────────────────────────────
 function readStore() {
   if (!fs.existsSync(STORE_PATH)) return { guilds: {} };
-  try { return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8')); }
-  catch { return { guilds: {} }; }
+  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
 }
 
 function writeStore(data) {
@@ -86,12 +85,12 @@ function cleanupOldTranscripts(maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
 }
 
 function isRecruitmentOfficer(member) {
-  if (member.roles.cache.some(role => OFFICER_RANKS.includes(role.name))) return true;
+  if (require('../utils/ranks').isOfficer(member)) return true;
   const recruitmentRoleId = getConfig(member.guild.id, 'RECRUITMENT_OFFICER_ROLE_ID');
   if (recruitmentRoleId) {
     return member.roles.cache.has(recruitmentRoleId);
   }
-  return member.roles.cache.some(r => OFFICER_RANKS.includes(r.name));
+  return require('../utils/ranks').isOfficer(member);
 }
 
 function sanitizeName(str) {
@@ -148,15 +147,15 @@ const openingTickets = new Set();
 async function openTicket(interaction, type, options = {}) {
   const key = `${interaction.guildId}:${options.user?.id || interaction.user.id}:${type}`;
   if (openingTickets.has(key)) {
-    if (options.followup) throw new Error('A question ticket is already being created. Retry approval shortly.');
+    if (options.followup || options.returnChannel) throw new Error('A question ticket is already being created. Retry approval shortly.');
     return interaction.reply({ content: 'Your ticket is already being created. Please wait.', ephemeral: true });
   }
   openingTickets.add(key);
   try { return await openTicketUnlocked(interaction, type, options); }
   finally { openingTickets.delete(key); }
 }
-async function openTicketUnlocked(interaction, type, { user = interaction.user, followup = false } = {}) {
-  if (!followup) await interaction.deferReply({ ephemeral: true });
+async function openTicketUnlocked(interaction, type, { user = interaction.user, followup = false, returnChannel = false } = {}) {
+  if (!followup && !returnChannel) await interaction.deferReply({ ephemeral: true });
 
   const guild   = interaction.guild;
   const guildId = guild.id;
@@ -172,7 +171,7 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
     if (!existingChannel) {
       deleteTicket(guildId, existingChannelId);
     } else {
-      if (followup) return existingChannel;
+      if (followup || returnChannel) return existingChannel;
       return interaction.editReply({ content: `You already have an open **${TICKET_TYPES[type].label}** ticket: <#${existingChannelId}>. Please use that one or ask a recruitment officer to close it first.` });
     }
   }
@@ -210,11 +209,12 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
         PermissionFlagsBits.ReadMessageHistory,
         PermissionFlagsBits.ManageMessages,
         PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
       ],
     },
     {
       id: user.id,
-      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
     },
   ];
 
@@ -234,10 +234,11 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
     } else {
       console.warn(`[Tickets] Recruitment officer role ID ${recruitmentRoleId} not found in guild ${guildId}. Ticket access may be restricted.`);
     }
-  } else {
+  }
+  {
     for (const rank of OFFICER_RANKS) {
-      const role = guild.roles.cache.find(r => r.name === rank);
-      if (role) {
+      const role = require('../utils/ranks').getRankRole(guild,rank);
+      if (role && !overwrites.some(o => o.id === role.id)) {
         overwrites.push({
           id: role.id,
           allow: [
@@ -287,7 +288,7 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
         .setTimestamp(),
       buildTicketEmbed(ticket),
     ],
-    components: [buildActionRow(channel.id)],
+    components: [buildActionRow(channel.id), ...(followup ? [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('me_overview:1').setLabel('My dashboard').setStyle(ButtonStyle.Secondary),new ButtonBuilder().setCustomId('me_squads:1').setLabel('Recruiting squads').setStyle(ButtonStyle.Secondary),new ButtonBuilder().setCustomId('me_training:1').setLabel('Training').setStyle(ButtonStyle.Secondary),new ButtonBuilder().setCustomId('me_orders:1').setLabel('Available tasks').setStyle(ButtonStyle.Secondary))] : [])],
   };
 
   if ((type === 'verify' || type === 'ally')) {
@@ -314,7 +315,7 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
           .setColor(0x2ECC71)
           .setTitle('✅  Verification Instructions')
           .setDescription(
-            '**EN:** Post a screenshot of your **F1 in-game stats** (shown above) in this ticket and an officer will verify you.\n\n' +
+            '**EN:** Post exactly one PNG, JPG or WebP screenshot (max. 8 MB) of your **F1 in-game stats** in this ticket and an officer will verify you.\n\n' +
             '**FR:** Publiez une capture d\'écran de vos **statistiques F1 en jeu** (affichées ci-dessus) dans ce ticket et un officier vous vérifiera.'
           )
           .setFooter({ text: '⚔️ HUSS Ticket System  •  Thank you for joining us!' })
@@ -328,7 +329,7 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
           .setTitle('🤝  Ally Request Instructions')
           .setDescription(
             '**EN:** Please provide:\n' +
-            '\u25b8 Your clan/group name\n' +
+            '\u25b8 Your clan/group name in the same message as the screenshot\n' +
             '\u25b8 A short description of your group\n' +
             '\u25b8 The F1 screenshot shown above\n\n' +
             '**FR:** Veuillez fournir\u00a0:\n' +
@@ -376,7 +377,7 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
     }
   }
 
-  if (followup) return channel;
+  if (followup || returnChannel) return channel;
   await interaction.editReply({ content: `✅ Ticket created: ${channel}` });
 }
 
@@ -408,9 +409,22 @@ async function closeTicket(interaction, channelId, reason) {
 // ── Module export ─────────────────────────────────────────────────────────────
 module.exports = {
   init: verification.init,
-  async createFollowupTicket(interaction, userId) {
+  createVerificationTicket(interaction, type) {
+    if (!['verify','ally'].includes(type)) throw new Error('Invalid verification type.');
+    return openTicket(interaction,type,{returnChannel:true});
+  },
+  async createFollowupTicket(interaction, userId, onboarding = false) {
     const user = await interaction.client.users.fetch(userId);
-    return openTicket(interaction, 'officer', { user, followup: true });
+    const channel = await openTicket(interaction, 'officer', { user, followup: true });
+    const ticket = getTicket(interaction.guildId, channel.id);
+    if (onboarding && ticket && !ticket.onboardingMessageId) {
+      try {
+        const message = await channel.send({content:'Welcome to HUSS! Open your personal onboarding checklist to choose interests, find a squad, explore training and join your first operation.',allowedMentions:{parse:[]},components:[new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`cx_onboarding:open:${interaction.guildId}:${userId}`).setLabel('Open onboarding').setStyle(ButtonStyle.Success))]});
+        ticket.onboardingMessageId = message.id;
+        saveTicket(interaction.guildId, channel.id, ticket);
+      } catch { console.warn('[Onboarding] Could not post the private ticket prompt; the approval DM and /onboarding remain available.'); }
+    }
+    return channel;
   },
   // /ticketpanel — posts the public sign-up panel
   data: new SlashCommandBuilder()
@@ -424,13 +438,13 @@ module.exports = {
       .setColor(0xE74C3C)
       .setTitle('🎟️  Support & Verification')
       .setDescription(
-        '**Verification & allies:** start here, send your F1 screenshot by **DM**, then receive an officer’s decision.\n' +
-        '*Vérification et alliés : commencez ici, envoyez votre capture F1 en **MP**, puis recevez la décision d’un officier.*\n\n' +
+        '**Verification & allies:** start here, post your F1 screenshot in your **private ticket**, then receive an officer’s decision.\n' +
+        '*Vérification et alliés : commencez ici, envoyez votre capture F1 dans votre **ticket privé**, puis recevez la décision d’un officier.*\n\n' +
         '**Officer questions** open a private server ticket. / Les questions ouvrent un ticket privé sur le serveur.'
       )
       .addFields(
-        { name: '✅  Verification',     value: 'Send your F1 screenshot by DM to join HUSS.\n*Envoyez votre capture F1 en MP pour rejoindre HUSS.*' },
-        { name: '🤝  Ally Request',     value: 'Send your F1 screenshot and clan name by DM.\n*Envoyez votre capture F1 et le nom de votre clan en MP.*' },
+        { name: '✅  Verification',     value: 'Post your F1 screenshot in your private ticket to join HUSS.\n*Envoyez votre capture F1 dans votre ticket privé pour rejoindre HUSS.*' },
+        { name: '🤝  Ally Request',     value: 'Post your F1 screenshot and clan name in your private ticket.\n*Envoyez votre capture F1 et le nom de votre clan dans votre ticket privé.*' },
         { name: '🎖️  Officer Question', value: 'Ask the officer team something privately.\n*Posez une question privée aux officiers.*' },
       )
       .setFooter({ text: '⚔️ HUSS Command' })
@@ -487,7 +501,7 @@ module.exports = {
       const ch = interaction.guild.channels.cache.get(channelId);
       if (ch) {
         const msgs   = await ch.messages.fetch({ limit: 15 });
-        const botMsg = msgs.find(m => m.author.id === interaction.client.user.id && m.embeds.length && m.components.length);
+        const botMsg = msgs.find(m => m.author.id === interaction.client.user.id && m.embeds.length && m.components.some(row => row.components.some(c => c.customId === `ticket_claim:${channelId}`)));
         if (botMsg) await botMsg.edit({ embeds: [buildTicketEmbed(ticket)], components: [buildActionRow(channelId)] }).catch(() => {});
       }
       return interaction.reply({ content: `✅ You have claimed this ticket.`, ephemeral: true });
