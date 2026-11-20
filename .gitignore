@@ -3,7 +3,7 @@ node_modules/
 psw.txt
 data/verification-requests.json
 data/verification-requests.json.tmp
-
+/tests
 data/audit.jsonl
 data/activity-checks.json
 data/logistics-inventory.json
