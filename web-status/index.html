@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>HUSS HQ · Live status</title>
+  <link rel="stylesheet" href="style.css?v=5">
+  <script src="dashboard.js?v=6" defer></script>
+</head>
+<body>
+  <main>
+    <header><a class="brand" href="./">HUSS<span>HQ</span></a><span class="live">● LIVE STATUS</span></header>
+    <section class="intro"><p class="eyebrow">SYSTEM OVERVIEW</p><h1>Service status at a glance.</h1><p>Live connection and feature availability for our Discord bot.</p></section>
+    <section class="status" id="status" aria-live="polite"><div class="indicator" id="indicator"></div><div><h2 id="headline">Fetching status…</h2><p id="summary">Connecting to the dashboard.</p></div></section>
+    <div class="meta"><span id="updated">No updates received yet</span><button id="refresh" type="button">↻ Refresh</button></div>
+    <section class="history" aria-labelledby="history-heading">
+      <div class="history-heading"><div><p class="eyebrow">AVAILABILITY HISTORY</p><h2 id="history-heading">A clearer picture over time.</h2></div><span class="period">Daily &amp; hourly · UTC</span></div>
+      <p class="history-note">Overall service shows one bar per day; components show one bar per hour. Each bar shows the worst observed status, and the current period is still in progress. Grey bars are not counted as operational.</p>
+      <div class="legend"><span><i class="level-1"></i>Operational</span><span><i class="level-2"></i>Planned release</span><span><i class="level-3"></i>Maintenance / attention</span><span><i class="level-4"></i>Errors</span><span><i class="level-6"></i>Unavailable</span><span><i class="level-5"></i>Missing updates</span><span><i class="level-0"></i>No data</span></div>
+      <div id="history-rows"><p>Waiting for history…</p></div>
+      <p id="history-detail" class="history-detail" aria-live="polite">Select a bar to inspect a day or hour.</p>
+    </section>
+    <div class="grid" id="fields"></div>
+    <footer><span>HUSS HQ · Service status</span><span>Refreshes every 15 seconds · Unreachable after 60 seconds without an update</span></footer>
+    <p class="note">Availability reflects loaded modules, maintenance and recorded errors. This is not a complete feature test. Outdated data is marked when connection issues occur.</p>
+  </main>
+</body>
+</html>
