@@ -4,6 +4,7 @@
   "description": "A Discord bot with slash command support using discord.js",
   "main": "index.js",
   "scripts": {
+    "test:panel-ux": "node --test scripts/test-panel-ux.cjs",
     "start": "node index.js",
     "deploy-commands": "node deploy-commands.js",
     "pm2:start": "pm2 start ecosystem.config.js",

@@ -148,22 +148,21 @@ function buildTicketPanelEmbed() {
     .setColor(0x5865F2)
     .setTitle('🎫 Support Tickets')
     .setDescription(
-      '**Verification & allies:** send your F1 screenshot by DM after clicking below. An officer reviews it on the server and sends you the result.\n' +
-      '**Vérification et alliés :** envoyez votre capture F1 en MP après avoir cliqué ci-dessous. Un officier examine votre demande et vous communique le résultat.\n\n' +
-      'Officer questions open a private server ticket. / Les questions ouvrent un ticket privé sur le serveur.'
+      '**Verification & allies:** post your F1 screenshot in the private ticket opened below. An officer reviews it in that ticket.\n' +
+      'Officer questions open a private server ticket.'
     )
     .addFields(
       {
         name: '✅ Verification',
-        value: 'Get verified as a member of the guild. / Obtenez votre vérification en tant que membre du clan.',
+        value: 'Get verified as a member of the guild.',
       },
       {
         name: '🤝 Ally Request',
-        value: 'Send your F1 screenshot and clan name by DM. / Envoyez votre capture F1 et le nom de votre clan en MP.',
+        value: 'Post your F1 screenshot and clan name in your private ticket.',
       },
       {
         name: '🎖️ Officer Question',
-        value: 'Ask the officer team a private question. / Posez une question privée à l’équipe des officiers.',
+        value: 'Ask the officer team a private question.',
       },
     )
     .setFooter({ text: 'Powered by Hypha' });
@@ -384,7 +383,8 @@ module.exports = {
       return interaction.reply({ content: 'Post this dashboard in a private officer channel. Deny View Channel for @everyone first.', ephemeral: true });
     }
     await interaction.deferReply({ ephemeral: true });
-    await interaction.channel.send(adminPanel.buildPage(interaction.guild));
+    const message = await interaction.channel.send(adminPanel.buildPage(interaction.guild));
+    require('../utils/shared-panels').register(message, interaction.guildId, 'admin');
 
     return interaction.editReply({
       content: '✅ HUSS admin dashboard posted.',
@@ -405,8 +405,14 @@ module.exports = {
     if (action.startsWith('bp_page:') || action === 'bp_config_view') {
       const [, page, offset] = action.split(':');
       const payload = adminPanel.buildPage(interaction.guild, action === 'bp_config_view' ? 'settings' : page, Number(offset || 0));
-      if (interaction.message.flags?.has(64)) return interaction.update({ content: null, ...payload });
-      return interaction.reply({ ...payload, ephemeral: true });
+      const privateView = interaction.message.flags?.has(64);
+      if (!privateView && interaction.channel.permissionsFor(interaction.guild.roles.everyone)?.has(PermissionFlagsBits.ViewChannel) !== false) {
+        return interaction.reply({content:'This dashboard must be in a private officer channel before it can be refreshed.',ephemeral:true});
+      }
+      await interaction.deferUpdate();
+      await interaction.editReply({ content: null, ...payload });
+      if (!privateView) require('../utils/shared-panels').register(interaction.message, interaction.guildId, 'admin', action === 'bp_config_view' ? 'settings' : page, Number(offset || 0));
+      return;
     }
     if (action.startsWith('bp_setup:')) {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.reply({ content: 'Manage Server permission is required to edit settings.', ephemeral: true });

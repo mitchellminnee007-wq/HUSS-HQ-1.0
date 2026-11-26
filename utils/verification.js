@@ -8,7 +8,7 @@ const { getConfig } = require('./config');
 const STORE = path.join(__dirname, '..', 'data', 'verification-requests.json');
 const locks = new Set();
 const initializedClients = new WeakSet();
-const types = { verify: 'Member verification / Vérification membre', ally: 'Ally verification / Vérification allié' };
+const types = { verify: 'Member verification', ally: 'Ally verification' };
 const active = request => request.status === 'pending' || (request.status === 'awaiting' && (request.ticketChannelId || Date.now() - request.createdAt < 86400000));
 function read() {
   if (!fs.existsSync(STORE)) return {};
@@ -48,17 +48,17 @@ function reviewPayload(request) {
   const pending = request.status === 'pending';
   const embed = new EmbedBuilder().setColor(pending ? 0xF0B232 : request.status === 'accepted' ? 0x2ECC71 : 0xE74C3C)
     .setTitle(types[request.type])
-    .setDescription(`Applicant / Candidat: <@${request.userId}>\n**${pending ? 'Awaiting review / En attente' : request.status === 'accepted' ? 'Accepted / Accepté' : 'Rejected / Refusé'}**`)
-    .addFields({ name: 'Submitted / Envoyé', value: `<t:${Math.floor(request.createdAt / 1000)}:f>` })
+    .setDescription(`Applicant: <@${request.userId}>\n**${pending ? 'Awaiting review' : request.status === 'accepted' ? 'Accepted' : 'Rejected'}**`)
+    .addFields({ name: 'Submitted', value: `<t:${Math.floor(request.createdAt / 1000)}:f>` })
     .setImage('attachment://screenshot.png')
     .setFooter({ text: `HUSS • ${request.id}` });
-  if (request.note) embed.addFields({ name: 'Applicant message / Message du candidat', value: request.note.slice(0, 1024) });
-  if (request.reviewedBy) embed.addFields({ name: 'Reviewed by / Évalué par', value: `<@${request.reviewedBy}>` });
-  if (request.reason) embed.addFields({ name: 'Reason / Motif', value: request.reason });
-  if (request.followupChannelId) embed.addFields({ name: 'Questions / Questions supplémentaires', value: `<#${request.followupChannelId}>` });
+  if (request.note) embed.addFields({ name: 'Applicant message', value: request.note.slice(0, 1024) });
+  if (request.reviewedBy) embed.addFields({ name: 'Reviewed by', value: `<@${request.reviewedBy}>` });
+  if (request.reason) embed.addFields({ name: 'Reason', value: request.reason });
+  if (request.followupChannelId) embed.addFields({ name: 'Questions', value: `<#${request.followupChannelId}>` });
   return { embeds: [embed], allowedMentions: { parse: [] }, components: pending ? [new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`ticket_review_accept:${request.id}`).setLabel('Accept / Accepter').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`ticket_review_reject:${request.id}`).setLabel('Reject / Refuser').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`ticket_review_accept:${request.id}`).setLabel('Accept').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`ticket_review_reject:${request.id}`).setLabel('Reject').setStyle(ButtonStyle.Danger),
   )] : [] };
 }
 
@@ -69,10 +69,10 @@ async function start(interaction, type) {
     const existing = Object.values(read()).find(r => r.guildId === interaction.guildId && r.userId === interaction.user.id && active(r));
     if (existing?.ticketChannelId) {
       const channel = await interaction.guild.channels.fetch(existing.ticketChannelId).catch(() => null);
-      if (channel) return interaction.editReply({content: `Use your private ticket: <#${channel.id}>. Post your F1 screenshot there. / Utilisez votre ticket privé pour envoyer votre capture F1.`});
+      if (channel) return interaction.editReply({content: `Use your private ticket: <#${channel.id}>. Post your F1 screenshot there.`});
       existing.status = 'cancelled'; save(existing);
     } else if (existing?.status === 'pending') {
-      return interaction.editReply({content:'Your previous screenshot is already awaiting officer review. / Votre capture attend déjà la décision d’un officier.'});
+      return interaction.editReply({content:'Your previous screenshot is already awaiting officer review.'});
     }
     try {
       const channel = await require('../features/tickets').createVerificationTicket(interaction, type);
@@ -81,12 +81,12 @@ async function start(interaction, type) {
         ticketChannelId:channel.id,reviewChannelId:channel.id,userId:interaction.user.id,type,status:'awaiting',createdAt:Date.now()};
       save(request);
       if(existing?.status==='awaiting'){existing.status='cancelled';save(existing);}
-      return interaction.editReply({content: `✅ Post your F1 screenshot in your private ticket: <#${channel.id}>. / Envoyez votre capture F1 dans votre ticket privé.`});
+      return interaction.editReply({content: `✅ Post your F1 screenshot in your private ticket: <#${channel.id}>.`});
     } catch(error) {
       console.error('[Verification] Start failed:',error);
-      return interaction.editReply({content:'Could not prepare your verification ticket. Ask an officer to check the bot permissions and try again. / Impossible de préparer votre ticket. Contactez un officier.'});
+      return interaction.editReply({content:'Could not prepare your verification ticket. Ask an officer to check the bot permissions and try again.'});
     }
-  }, () => interaction.editReply({content:'Your request is being processed. / Votre demande est en cours.'}));
+  }, () => interaction.editReply({content:'Your request is being processed.'}));
 }
 
 async function onMessage(message) {
@@ -108,14 +108,14 @@ async function onMessage(message) {
     }
     if (!request) return;
     if (!message.attachments.size && message.content.trim().toLowerCase() !== 'cancel') return;
-    if (request.status === 'pending') return message.reply('Your screenshot is awaiting review. / Votre capture attend la décision d’un officier.');
+    if (request.status === 'pending') return message.reply('Your screenshot is awaiting review.');
     if (message.content.trim().toLowerCase() === 'cancel') {
       request.status = 'cancelled'; save(request);
-      return message.reply('Request cancelled. You can start again from the server panel. / Demande annulée. Vous pouvez recommencer depuis le panneau du serveur.');
+      return message.reply('Request cancelled. You can start again from the server panel.');
     }
     const images = [...message.attachments.values()].filter(file => /^image\/(png|jpeg|webp)$/i.test(file.contentType || '') && file.size <= 8 * 1024 * 1024);
-    if (images.length !== 1 || message.attachments.size !== 1) return message.reply('Attach exactly one PNG, JPG or WebP screenshot, max. 8 MB. / Joignez une seule capture PNG, JPG ou WebP, max. 8 Mo.');
-    if (request.type === 'ally' && !message.content.trim()) return message.reply('Resend the screenshot with your clan/group name in the same message. / Renvoyez la capture avec le nom de votre clan/groupe dans le même message.');
+    if (images.length !== 1 || message.attachments.size !== 1) return message.reply('Attach exactly one PNG, JPG or WebP screenshot, max. 8 MB.');
+    if (request.type === 'ally' && !message.content.trim()) return message.reply('Resend the screenshot with your clan/group name in the same message.');
     const guild = await message.client.guilds.fetch(request.guildId);
     await guild.members.fetch(request.userId);
     const channel = await reviewChannel(guild, request.ticketChannelId);
@@ -127,8 +127,8 @@ async function onMessage(message) {
       await review.delete().catch(() => {});
       throw error;
     }
-    await message.reply('✅ Screenshot submitted! An officer will review it and you’ll receive the result here. / Capture envoyée ! Un officier examinera votre demande et vous recevrez le résultat ici.');
-  }, () => message.reply('Your previous upload is still processing. / Votre envoi précédent est en cours.'));
+    await message.reply('✅ Screenshot submitted! An officer will review it and you’ll receive the result here.');
+  }, () => message.reply('Your previous upload is still processing.'));
 }
 
 function roleByName(guild, name) {
@@ -172,8 +172,8 @@ async function handleReview(interaction) {
   if (request.userId === interaction.user.id) return interaction.reply({ content: 'Another officer must review your request.', ephemeral: true });
   if (request.status !== 'pending') return interaction.reply({ content: 'This request has already been reviewed.', ephemeral: true });
   if (action === 'ticket_review_reject') {
-    return interaction.showModal(new ModalBuilder().setCustomId(`ticket_review_reason:${id}`).setTitle('Reject request / Refuser').addComponents(
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('Reason / Motif').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500))));
+    return interaction.showModal(new ModalBuilder().setCustomId(`ticket_review_reason:${id}`).setTitle('Reject request').addComponents(
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('Reason').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500))));
   }
   if (!['ticket_review_accept', 'ticket_review_reason'].includes(action)) return;
   await interaction.deferReply({ ephemeral: true });
@@ -186,12 +186,12 @@ async function handleReview(interaction) {
     try {
       if (accepted) {
         await grantRoles(interaction.guild, current);
-        const channel = await require('../features/tickets').createFollowupTicket(interaction, current.userId, current.type === 'verify');
+        const channel = await require('../features/tickets').createFollowupTicket(interaction, current.userId, current.type === 'verify', current.ticketChannelId || null);
         current.followupChannelId = channel.id;
       }
     } catch (error) {
       console.error('[Verification] Role update failed:', error);
-      return interaction.editReply(`Could not finish approval. Roles may already be updated, but the request remains pending until its question ticket is ready. Check bot permissions and retry Accept. ${error.message}`);
+      return interaction.editReply(`Could not finish approval. Roles may already be updated, but the request remains pending until the welcome messages are ready in the applicant's ticket. Check bot permissions and retry Accept. ${error.message}`);
     }
     current.status = accepted ? 'accepted' : 'rejected';
     current.reviewedBy = interaction.user.id;
@@ -204,11 +204,11 @@ async function handleReview(interaction) {
       await panel.edit(reviewPayload(current));
     } catch (error) { panelUpdated = false; console.error('[Verification] Panel update failed:', error); }
     let notified = true;
-    try {
-      const notification = { content: accepted
-        ? `✅ Your ${current.type === 'ally' ? 'ally' : 'member'} verification for **${current.guildName}** was accepted. Your roles have been updated.\nVotre vérification a été acceptée. Vos rôles ont été mis à jour.\n\nAdditional questions? Your private ticket / Questions supplémentaires ? Votre ticket privé :\nhttps://discord.com/channels/${current.guildId}/${current.followupChannelId}`
-        : `Your verification for **${current.guildName}** was rejected. / Votre vérification a été refusée.\n\n**Reason / Motif:** ${reason}\n\nYou can submit a new request from the server panel. / Vous pouvez refaire une demande depuis le panneau du serveur.`,
-        components: accepted && current.type === 'verify' ? [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`cx_onboarding:open:${current.guildId}:${current.userId}`).setLabel('Open onboarding').setStyle(ButtonStyle.Success))] : [],
+    // Approval already posts the welcome, dashboard and onboarding in the ticket.
+    // Only rejection needs this separate notification.
+    if (!accepted) try {
+      const notification = { content: `Your verification for **${current.guildName}** was rejected.\n\n**Reason:** ${reason}\n\nYou can submit a new request from the server panel.`,
+        components: [],
         allowedMentions: { parse: [] } };
       if(current.ticketChannelId) await interaction.channel.send(notification);
       const sendDM=async()=>{const user=await interaction.client.users.fetch(current.userId);await user.send(notification);};
@@ -225,7 +225,7 @@ function init(client) {
   client.on('messageCreate', message => {
     onMessage(message).catch(async error => {
       console.error('[Verification] Upload failed:', error);
-      await message.reply('Could not process your screenshot. Try again, or contact an officer if this continues. / Impossible de traiter votre capture. Réessayez ou contactez un officier.').catch(() => {});
+      await message.reply('Could not process your screenshot. Try again, or contact an officer if this continues.').catch(() => {});
     });
   });
 }

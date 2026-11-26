@@ -56,6 +56,26 @@ async function execute(i){await i.deferReply({ephemeral:true});try{const actor=a
  result=store.transact(i.guildId,g=>store.change(g,actor,id,sub,input));}
  await changed(i,result,sub);return i.editReply(result.deletedAt?{content:'Decision saved. Squad archived.'}:detail(actor,result.id));
  }catch(e){return i.editReply({content:e.message,embeds:[],components:[],allowedMentions:{parse:[]}});}}
-async function handle(i){await i.deferReply({ephemeral:true});try{const member=await i.guild.members.fetch(i.user.id);store.ensureMember(member);const [action,id,page,view]=i.customId.split(':');if(action==='sq_open')return i.editReply(detail(member,i.values[0]));if(action==='sq_review'||action==='sq_reviewnext')return i.editReply(review(member,id));if(['sq_list','sq_next','sq_prev'].includes(action))return i.editReply(directory(member,id));if(['sq_requests','sq_reqnext'].includes(action))return i.editReply(requests(member,id,page));if(['sq_info','sq_history','sq_refresh','sq_page'].includes(action))return i.editReply(detail(member,id,page,action==='sq_history'||view==='history'));
- const s=store.transact(i.guildId,g=>store.change(g,member,id,action.slice(3)));await changed(i,s,action);return i.editReply(detail(member,id));}catch(e){return i.editReply({content:e.message,allowedMentions:{parse:[]}});}}
+async function handle(i) {
+ const [action,id,page,view]=i.customId.split(':');
+ const directoryAction=['sq_list','sq_next','sq_prev'].includes(action);
+ const shared=!i.message?.flags?.has(64);
+ // Public directories render only their public projection, never the viewer's private details.
+ const update=directoryAction || !shared;
+ if(update)await i.deferUpdate();else await i.deferReply({ephemeral:true});
+ try {
+  const member=await i.guild.members.fetch({user:i.user.id,force:true});store.ensureMember(member);
+  if(directoryAction){
+   await i.editReply(directory(member,id,shared));
+   if(shared)require('../utils/shared-panels').register(i.message,i.guildId,'squads',Number(id)||0);
+   return;
+  }
+  if(action==='sq_open')return i.editReply(detail(member,i.values[0]));
+  if(action==='sq_review'||action==='sq_reviewnext')return i.editReply(review(member,id));
+  if(['sq_requests','sq_reqnext'].includes(action))return i.editReply(requests(member,id,page));
+  if(['sq_info','sq_history','sq_refresh','sq_page'].includes(action))return i.editReply(detail(member,id,page,action==='sq_history'||view==='history'));
+  const s=store.transact(i.guildId,g=>store.change(g,member,id,action.slice(3)));
+  await changed(i,s,action);return i.editReply(detail(member,id));
+ }catch(e){const payload={content:e.message,allowedMentions:{parse:[]}};return update?i.followUp({...payload,ephemeral:true}):i.editReply(payload);}
+}
 module.exports={data,execute,handle,directory,detail,async autocomplete(i){const member=await i.guild.members.fetch(i.user.id),query=String(i.options.getFocused()).toLowerCase();await i.respond(Object.values(state(i.guildId).squads||{}).filter(s=>(store.visible(member,s)||(i.options.getSubcommand()==='history'&&store.authority(member,s)))&&s.name.toLowerCase().includes(query)).slice(0,25).map(s=>({name:s.name,value:s.id})));}};

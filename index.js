@@ -88,9 +88,18 @@ client.once(Events.ClientReady, () => {
 
 client.on(Events.InteractionCreate, async interaction => {
   require('./utils/health').attach(interaction);
-  if ((interaction.isButton() || interaction.isModalSubmit()) && interaction.customId.startsWith('cx_')) {
+  if (interaction.customId?.startsWith('ux:')) return require('./utils/ux-home').handle(interaction);
+  if (interaction.guildId && require('./utils/ux-release').enabled(interaction.guildId)) {
+    const id = interaction.customId || '';
+    const home = id === 'cx_hub:home' ? 'home' : id.startsWith('me_tab:') ? ({overview:'home',orders:'logistics',events:'events',squads:'squads',training:'training',requests:'requests'}[id.split(':')[1]]) : null;
+    if (home) {
+      try { return await require('./utils/ux-home').open(interaction, home); }
+      catch(e) { const p={content:e.message,ephemeral:true,allowedMentions:{parse:[]}};return interaction.deferred?interaction.editReply(p):interaction.reply(p); }
+    }
+  }
+  if ((interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('cx_')) {
     const name=interaction.customId.split(':')[0].slice(3);
-    if(!['hub','feedback','absence','notifications','onboarding','debrief','squad-review','wararchive'].includes(name))return;
+    if(!['hub','feedback','absence','notifications','onboarding','debrief','squad-review','wararchive','warvote'].includes(name))return;
     try { await client.commands.get(name).handle(interaction); }
     catch(e){const reply={content:e.message||'Could not complete this action.',ephemeral:true,allowedMentions:{parse:[]}};if(interaction.deferred||interaction.replied)await interaction.followUp(reply).catch(()=>{});else await interaction.reply(reply).catch(()=>{});}
     return;
@@ -528,7 +537,14 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 
   try {
-    await command.execute(interaction);
+    const ux = require('./utils/ux-release').enabled(interaction.guildId);
+    const name = interaction.commandName;
+    const sub = interaction.options.getSubcommand(false);
+    if (ux && (name === 'me' || name === 'help' || name === 'hub' && sub === 'view' || name === 'onboarding' && sub === 'view')) {
+      const tab = name === 'me' ? interaction.options.getString('tab') : null;
+      const home = name === 'help' ? 'help' : name === 'onboarding' ? 'onboarding' : ({orders:'logistics',events:'events',training:'training',squads:'squads',requests:'requests'}[tab] || 'home');
+      await require('./utils/ux-home').open(interaction, home);
+    } else await command.execute(interaction);
   } catch (error) {
     console.error(`Error executing ${interaction.commandName}:`, error);
     const message = formatErrorMessage(error);
@@ -574,5 +590,6 @@ for (const file of featureFiles) {
 }
 
 require('./utils/live-panels').init(client);
+require('./utils/shared-panels').init(client);
 require('./utils/health').init(client);
 client.login(token);

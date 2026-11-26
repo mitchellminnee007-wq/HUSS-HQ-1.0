@@ -8,3 +8,7 @@ data/audit.jsonl
 data/activity-checks.json
 data/logistics-inventory.json
 data/*.tmp
+web-status/config.php
+web-status/snapshot.php
+data/ux-release.json
+data/shared-panels.json

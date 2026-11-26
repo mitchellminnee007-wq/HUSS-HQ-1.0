@@ -62,7 +62,7 @@ function buildPage(guild, page = 'home', offset = 0) {
       .addFields({ name: 'Operations', value: channel('OPERATIONS_CHANNEL_ID'), inline: true }, { name: 'Trainings', value: channel('TRAININGS_CHANNEL_ID'), inline: true });
     components.push(row(button('bp_operation', 'Create operation', ButtonStyle.Primary), button('bp_training', 'Create training', ButtonStyle.Primary)));
   } else if (page === 'war') {
-    embed.setDescription('Manage activity, kill counts and the four-day rollover. Activity checks only schedule a rollover when you explicitly opt in.')
+    embed.setDescription(require('./ux-release').enabled(guild.id) ? 'Manage activity and kill counts. Warflow uses a full 48-hour activity check, followed by a separate Commander preview and confirmation.' : 'Manage activity, kill counts and the four-day rollover. Activity checks only schedule a rollover when you explicitly opt in.')
       .addFields({ name: 'Kill count', value: war ? String(war.name).slice(0, 100) : 'No active tracker' },
         { name: 'Rollover', value: rollover ? `<t:${Math.floor(rollover.executeAt / 1000)}:F> • Scheduled by <@${rollover.startedBy}>` : 'Not scheduled' });
     components.push(row(button('bp_killcount', 'Start kill count', ButtonStyle.Primary).setDisabled(Boolean(war)), button('bp_activemember', 'Post activity check', ButtonStyle.Success)));

@@ -7,7 +7,7 @@ function set(guildId, userId, category, value) {
   c.transact(guildId, g => {g.preferences ||= {}; g.preferences[userId] ||= {}; g.preferences[userId][category] = value;});
 }
 function operationButtons(guildId, eventId) {
-  return c.rows([['confirm','Confirm attendance'],['late','Running late'],['withdraw','Withdraw']].map(([action,label]) => c.button('hub',`rsvp:${guildId}:${eventId}:${action}`,label)));
+  return c.rows([['confirm',require('./ux-release').enabled(guildId)?'I am coming':'Confirm attendance'],['late','Running late'],['withdraw','Withdraw']].map(([action,label]) => c.button('hub',`rsvp:${guildId}:${eventId}:${action}`,label)));
 }
 async function deliver(guild, userId, category, key, payload, channelId) {
   const value = mode(guild.id, userId, category);

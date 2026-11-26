@@ -35,7 +35,7 @@ async function rsvp(i,guildId,eventId,action){
  latest.attendees[action==='withdraw'?'declined':'accepted'].push({id:member.id,name:member.displayName});
  latest.arrivals||={};latest.arrivals[member.id]={status:action,at:Date.now()};api.saveOp(guildId,eventId,latest);
  await api.refreshOpMessage({guild},latest,eventId);
- return {content:{confirm:'Attendance confirmed.',late:'Marked as running late; you remain on the accepted roster.',withdraw:'You have withdrawn from this operation.'}[action]};
+ return {content:{confirm:require('../utils/ux-release').enabled(guildId)?'You are marked as coming. This is an RSVP, not recorded attendance.':'Attendance confirmed.',late:'Marked as running late; you remain on the accepted roster.',withdraw:'You have withdrawn from this operation.'}[action]};
 }
 async function execute(i){if(i.options.getSubcommand()==='panel'){c.officer(i);return i.reply(entry());}
  return c.run(i,async x=>{c.member(x);if(x.options.getSubcommand()==='reminders'){require('../utils/member-notifications').set(x.guildId,x.user.id,'operations',x.options.getString('delivery'));return {content:'Operation reminder preference saved.'};}return view(x);},'hub');}

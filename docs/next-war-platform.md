@@ -1,5 +1,7 @@
 # Next-war platform tools
 
+The UX package requested on 2026-11-25 is planned separately for the **war after the next war**, not this rollout. See [UX release plan](ux-release-plan.md) for scope and release conditions.
+
 ## Rollout
 
 **This war:** `/health` (officers) adds measured Discord REST errors/rate-limit waits, interaction acknowledgement p95, event-loop p95, Node memory, TTS wait/synthesis p95, live panel failures and overdue upcoming event reminders. `/botstatus` shows a public recent-health indicator. Samples are bounded, in-memory, and reset on restart; no message text, tokens or private request evidence is recorded. REST counters are process-wide. This is observability, not automated repair or an offline uptime monitor.

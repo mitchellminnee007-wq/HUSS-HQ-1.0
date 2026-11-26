@@ -280,9 +280,8 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
         .setTitle(followup ? '✅ Verification complete • Questions?' : '🎟️  Ticket Opened')
         .setDescription(
           followup
-            ? `Welcome, <@${user.id}>! Your request was accepted. Use this private ticket for any additional questions.\nBienvenue ! Votre demande a été acceptée. Utilisez ce ticket privé pour toute question supplémentaire.`
-            : `> Welcome, <@${user.id}>! An officer will be with you shortly.\n` +
-          `> *Bienvenue ! Un officier vous rejoindra très bientot.*`
+            ? `Welcome, <@${user.id}>! Your request was accepted. Use this private ticket for any additional questions.`
+            : `Welcome, <@${user.id}>! An officer will be with you shortly.`
         )
         .setFooter({ text: '⚔️ HUSS Ticket System' })
         .setTimestamp(),
@@ -315,8 +314,7 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
           .setColor(0x2ECC71)
           .setTitle('✅  Verification Instructions')
           .setDescription(
-            '**EN:** Post exactly one PNG, JPG or WebP screenshot (max. 8 MB) of your **F1 in-game stats** in this ticket and an officer will verify you.\n\n' +
-            '**FR:** Publiez une capture d\'écran de vos **statistiques F1 en jeu** (affichées ci-dessus) dans ce ticket et un officier vous vérifiera.'
+            'Post exactly one PNG, JPG or WebP screenshot (max. 8 MB) of your **F1 in-game stats** in this ticket and an officer will verify you.'
           )
           .setFooter({ text: '⚔️ HUSS Ticket System  •  Thank you for joining us!' })
       ]
@@ -328,14 +326,10 @@ async function openTicketUnlocked(interaction, type, { user = interaction.user, 
           .setColor(0x3498DB)
           .setTitle('🤝  Ally Request Instructions')
           .setDescription(
-            '**EN:** Please provide:\n' +
+            'Please provide:\n' +
             '\u25b8 Your clan/group name in the same message as the screenshot\n' +
             '\u25b8 A short description of your group\n' +
-            '\u25b8 The F1 screenshot shown above\n\n' +
-            '**FR:** Veuillez fournir\u00a0:\n' +
-            '\u25b8 Le nom de votre clan/groupe\n' +
-            '\u25b8 Une courte description de votre groupe\n' +
-            '\u25b8 La capture d\'écran F1 affichée ci-dessus'
+            '\u25b8 The F1 screenshot shown above'
           )
           .setFooter({ text: '⚔️ HUSS Ticket System  •  We look forward to collaborating!' })
       ]
@@ -413,16 +407,43 @@ module.exports = {
     if (!['verify','ally'].includes(type)) throw new Error('Invalid verification type.');
     return openTicket(interaction,type,{returnChannel:true});
   },
-  async createFollowupTicket(interaction, userId, onboarding = false) {
-    const user = await interaction.client.users.fetch(userId);
-    const channel = await openTicket(interaction, 'officer', { user, followup: true });
+  async createFollowupTicket(interaction, userId, onboarding = false, existingChannelId = null) {
+    let channel;
+    if (existingChannelId) {
+      const existing = getTicket(interaction.guildId, existingChannelId);
+      if (!existing || existing.userId !== userId || !['verify','ally'].includes(existing.type)) {
+        throw new Error('The original verification ticket is no longer available for this applicant.');
+      }
+      channel = await interaction.guild.channels.fetch(existingChannelId);
+      if (!channel) throw new Error('The original verification ticket could not be opened.');
+      if (!existing.verificationWelcomeMessageId) {
+        const message = await channel.send({
+          content: `✅ Welcome, <@${userId}>! Your verification is complete. Keep using this ticket for any questions.`,
+          allowedMentions: { parse: [] },
+          components: [new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('me_overview:1').setLabel('My dashboard').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('me_squads:1').setLabel('Recruiting squads').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('me_training:1').setLabel('Training').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('me_orders:1').setLabel('Available tasks').setStyle(ButtonStyle.Secondary))]
+        });
+        existing.verificationWelcomeMessageId = message.id;
+        saveTicket(interaction.guildId, channel.id, existing);
+      }
+    } else {
+      // Legacy DM applications have no applicant-owned verification ticket.
+      const user = await interaction.client.users.fetch(userId);
+      channel = await openTicket(interaction, 'officer', { user, followup: true });
+    }
     const ticket = getTicket(interaction.guildId, channel.id);
     if (onboarding && ticket && !ticket.onboardingMessageId) {
       try {
         const message = await channel.send({content:'Welcome to HUSS! Open your personal onboarding checklist to choose interests, find a squad, explore training and join your first operation.',allowedMentions:{parse:[]},components:[new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`cx_onboarding:open:${interaction.guildId}:${userId}`).setLabel('Open onboarding').setStyle(ButtonStyle.Success))]});
         ticket.onboardingMessageId = message.id;
         saveTicket(interaction.guildId, channel.id, ticket);
-      } catch { console.warn('[Onboarding] Could not post the private ticket prompt; the approval DM and /onboarding remain available.'); }
+      } catch (error) {
+        if (existingChannelId) throw error;
+        console.warn('[Onboarding] Could not post the private ticket prompt; the approval DM and /onboarding remain available.');
+      }
     }
     return channel;
   },
@@ -439,13 +460,12 @@ module.exports = {
       .setTitle('🎟️  Support & Verification')
       .setDescription(
         '**Verification & allies:** start here, post your F1 screenshot in your **private ticket**, then receive an officer’s decision.\n' +
-        '*Vérification et alliés : commencez ici, envoyez votre capture F1 dans votre **ticket privé**, puis recevez la décision d’un officier.*\n\n' +
-        '**Officer questions** open a private server ticket. / Les questions ouvrent un ticket privé sur le serveur.'
+        '**Officer questions** open a private server ticket.'
       )
       .addFields(
-        { name: '✅  Verification',     value: 'Post your F1 screenshot in your private ticket to join HUSS.\n*Envoyez votre capture F1 dans votre ticket privé pour rejoindre HUSS.*' },
-        { name: '🤝  Ally Request',     value: 'Post your F1 screenshot and clan name in your private ticket.\n*Envoyez votre capture F1 et le nom de votre clan dans votre ticket privé.*' },
-        { name: '🎖️  Officer Question', value: 'Ask the officer team something privately.\n*Posez une question privée aux officiers.*' },
+        { name: '✅  Verification',     value: 'Post your F1 screenshot in your private ticket to join HUSS.' },
+        { name: '🤝  Ally Request',     value: 'Post your F1 screenshot and clan name in your private ticket.' },
+        { name: '🎖️  Officer Question', value: 'Ask the officer team something privately.' },
       )
       .setFooter({ text: '⚔️ HUSS Command' })
       .setTimestamp();

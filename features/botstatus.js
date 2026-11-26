@@ -62,6 +62,7 @@ function payload(client, guildId) {
         {name: 'Uptime', value: uptime, inline: true},
         {name: 'Recent health • Last 15 minutes', value: healthError ? '🟣 Errors were recorded. Officers can inspect Health details; this does not mean every feature is down.' : healthIssue ? '🟡 Discord throttling or elevated event-loop delay measured. Officers can inspect Health details.' : '🟢 No request, interaction, notification or TTS errors recorded; no throttling or elevated event-loop delay measured.'},
         {name: 'Need more information?', value: 'Refresh for a new snapshot. Maintenance & releases explains paused features and next-war plans. Health details is for Officers and Commanders.'},
+        {name: 'War 144 UX upgrade', value: require('../utils/ux-release').enabled(guildId) ? 'Released • HUSS Home is available.' : '🕒 Locked for members until the War 144 Commander release. War 143 keeps the current UX.'},
       ).setTimestamp().setFooter({text: 'Snapshot only • Availability reflects loaded modules and maintenance. An offline bot cannot update this panel.'})],
     components: [new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('botstatus:refresh').setLabel('Refresh status').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
@@ -80,7 +81,8 @@ module.exports = {
     if (shared && !isOfficer(interaction.member) && !interaction.member.permissions.has(P.ManageGuild)) {
       return interaction.reply({ content: 'Officer or Manage Server access is required to post a panel.', ephemeral: true });
     }
-    return interaction.reply({ ...payload(interaction.client, interaction.guildId), ephemeral: !shared });
+    await interaction.reply({ ...payload(interaction.client, interaction.guildId), ephemeral: !shared });
+    if (shared) require('../utils/shared-panels').register(await interaction.fetchReply(), interaction.guildId, 'status');
   },
   async handleButton(interaction) {
     if (!interaction.guildId) return;
@@ -96,7 +98,8 @@ module.exports = {
     }
     if (interaction.customId !== 'botstatus:refresh') return;
     await interaction.deferUpdate();
-    return interaction.editReply(payload(interaction.client, interaction.guildId));
+    await interaction.editReply(payload(interaction.client, interaction.guildId));
+    require('../utils/shared-panels').register(interaction.message, interaction.guildId, 'status');
   },
   payload,
 };
